@@ -74,7 +74,7 @@ Commit - d060847
 
 ## 16 May 2026 — Reusable Auth Components
 
-Commit - <hash>
+Commit - 2439f4c
 
 ### Completed 
 
@@ -92,3 +92,22 @@ Commit - <hash>
       input styling
 - Integrated `lucide-react` for authentication interface icons
 - Integrated `react-icons` for OAuth provider branding icons
+
+## 16 May 2026 — Login Flow Implementation
+
+Commit - <hash>
+
+### Completed 
+
+- Implemented responsive login page using reusable auth infrastructure
+- Added:
+      username/email input flow
+      password input flow
+      mock validation handling
+      login state handling
+- Added navigation routing between:
+      login
+      signup
+      forgot password
+- Integrated reusable authentication components into login workflow
+- Configured authentication route structure using React Router
