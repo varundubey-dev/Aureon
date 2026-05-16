@@ -58,7 +58,7 @@ Aureon/
 
 ## 16 May 2026 — Auth Layout & Visual System
 
-Commit - <commit-hash>
+Commit - d060847
 
 ### Completed
 
@@ -71,3 +71,24 @@ Commit - <commit-hash>
       responsive auth page split layout
 - Added dedicated authentication theme variables inside index.css
 - Standardized reusable auth visual styling for future auth pages
+
+## 16 May 2026 — Reusable Auth Components
+
+Commit - <hash>
+
+### Completed 
+
+- Created reusable `AuthHeader` component for shared auth page titles and subtitles
+- Created reusable `AuthInput` component with integrated icon - support and validation state handling
+- Added reusable `OtpForm` component for OTP verification flows
+- Added reusable `PasswordForm` component for password setup/reset flows
+- Added reusable `SocialAuth` component containing:
+      authentication divider
+      Google authentication button
+- Standardized authentication form:
+      spacing
+      interaction states
+      button styling
+      input styling
+- Integrated `lucide-react` for authentication interface icons
+- Integrated `react-icons` for OAuth provider branding icons
