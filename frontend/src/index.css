@@ -1,1 +1,66 @@
 @import "tailwindcss";
+
+@theme {
+
+  /* Backgrounds */
+  --color-bg-primary: #0d0d0d;
+  --color-bg-secondary: #161616;
+  --color-bg-tertiary: #1f1f1f;
+
+  /* Text */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b3b3b3;
+  --color-text-muted: #808080;
+
+  /* Borders */
+  --color-border-primary: #2a2a2a;
+  --color-border-secondary: #3a3a3a;
+
+  /* Accent */
+  --color-accent-primary: #E7C98B;
+  --color-accent-secondary: #CFA15B;
+  --color-accent-hover: #F2D7A3;
+
+  /* Accent Text */
+  --color-accent-text: #111111;
+
+  /* Highlight */
+  --color-highlight-primary: #E7C98B;
+
+  /* States */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  /* Glass */
+  --color-surface-glass: rgba(255, 255, 255, 0.02);
+  --color-border-glass: rgba(255, 255, 255, 0.05);
+
+  /* Shadows */
+  --color-shadow-primary: rgba(0, 0, 0, 0.3);
+
+  /* Glow */
+  --color-glow-primary: rgba(231, 201, 139, 0.12);
+
+  /* Auth Hero */
+  --color-auth-hero: #070707;
+  --color-auth-light: rgba(255, 255, 255, 0.04);
+
+  /* Background Images */
+  --background-image-auth-gradient:
+    linear-gradient(to bottom right, #050505, #080808, #101010);
+
+  /* Sizes */
+  --spacing-auth-glow: 700px;
+  --spacing-auth-logo-sm: 260px;
+  --spacing-auth-logo-md: 340px;
+  --spacing-auth-logo-lg: 400px;
+
+  /* Blur */
+  --blur-auth-glow: 180px;
+
+  /* Shadows */
+  --drop-shadow-auth-logo:
+    0 0 35px rgba(255, 215, 100, 0.08);
+
+}
