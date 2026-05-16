@@ -29,6 +29,8 @@
 ### Runtime Dependencies
 
 - react-router-dom
+- react-icons
+- lucide-react
 
 ### Dev Dependencies
 
