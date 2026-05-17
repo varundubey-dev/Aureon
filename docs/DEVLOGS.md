@@ -196,7 +196,7 @@ backend/
 
 ## 17 May 2026 — Database Migration System
 
-Commit - <commit_hash>
+Commit - 1b0932b
 
 ### Completed
 
@@ -218,3 +218,26 @@ Commit - <commit_hash>
 
 - Database schema changes will now be managed exclusively through Alembic migrations
 - Initial migration history established for future backend development
+
+## 17 May 2026 — Frontend Communication & CORS Integration
+
+Commit - <commit_hash>
+
+### Completed
+
+- Configured FastAPI CORS middleware
+- Added environment-driven frontend origin configuration
+- Connected Vite frontend with FastAPI backend
+- Verified frontend-backend API communication
+- Added local development origin restriction setup
+- Tested API connectivity using backend health endpoint
+
+### Architecture Decisions
+
+- Restricted allowed origins using environment variables instead of wildcard CORS configuration
+- Established scalable frontend/backend communication foundation for future authentication flows
+- Standardized backend API access through versioned `/api/v1` routes
+
+### Notes
+
+- Backend communication verified successfully from local frontend environment
