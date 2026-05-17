@@ -133,7 +133,7 @@ Commit - 972ad04
 
 ## 16 May 2026 — Password Recovery Flow
 
-Commit - <hash>
+Commit - 3ac6784
 
 ### Completed 
 
@@ -148,3 +148,96 @@ Commit - <hash>
       authentication layout
 - Added navigation flow back to login page after password reset
 - Standardized recovery flow styling with existing auth architecture
+
+## 17 May 2026 — Backend Foundation Setup
+
+Commit - 8e7a74c
+
+### Backend Structure
+
+backend/
+      ├── app/
+      │    ├── api/
+      │    │    └── v1/
+      │    ├── core/
+      │    ├── models/
+      │    ├── schemas/
+      │    ├── services/
+      │    └── utils/
+      ├── alembic/
+      ├── requirements.txt
+      ├── alembic.ini
+      └── .env.example
+
+### Completed
+
+- Initialized FastAPI backend architecture
+- Added API versioning structure using `/api/v1`
+- Configured modular backend folder organization
+- Added PostgreSQL database engine configuration
+- Integrated SQLModel ORM foundation
+- Added environment variable configuration system
+- Added initial health check route
+- Configured backend dependency management
+- Added backend Git ignore rules
+- Standardized backend scalability-oriented structure
+
+### Architecture Decisions
+
+- Chose PostgreSQL as primary relational database
+- Added API versioning early for long-term maintainability
+- Structured backend modules separately for:
+      routes
+      models
+      schemas
+      services
+      core configuration
+- Established backend foundation before authentication system implementation
+
+## 17 May 2026 — Database Migration System
+
+Commit - 1b0932b
+
+### Completed
+
+- Configured Alembic migration infrastructure
+- Connected Alembic with SQLModel metadata
+- Added migration environment configuration
+- Generated initial database migration
+- Added initial `User` table schema migration
+- Integrated PostgreSQL schema version tracking
+- Transitioned from runtime table creation to migration-driven schema management
+
+### Architecture Decisions
+
+- Replaced `SQLModel.metadata.create_all()` workflow with Alembic migrations
+- Established migration-first database workflow for future schema evolution
+- Standardized database version control strategy for scalability and deployment consistency
+
+### Notes
+
+- Database schema changes will now be managed exclusively through Alembic migrations
+- Initial migration history established for future backend development
+
+## 17 May 2026 — Frontend Communication & CORS Integration
+
+Commit - <commit_hash>
+
+### Completed
+
+- Configured FastAPI CORS middleware
+- Added environment-driven frontend origin configuration
+- Connected Vite frontend with FastAPI backend
+- Verified frontend-backend API communication
+- Added local development origin restriction setup
+- Tested API connectivity using backend health endpoint
+
+### Architecture Decisions
+
+- Restricted allowed origins using environment variables instead of wildcard CORS configuration
+- Established scalable frontend/backend communication foundation for future authentication flows
+- Standardized backend API access through versioned `/api/v1` routes
+
+### Notes
+
+- Backend communication verified successfully from local frontend environment
