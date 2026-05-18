@@ -244,7 +244,7 @@ Commit - 38977a2
 
 ## 18 May 2026 — Core Authentication Database Architecture
 
-Commit - <your_commit_hash>
+Commit - 9e7c78b
 
 ### Completed
 
@@ -268,3 +268,30 @@ Commit - <your_commit_hash>
 
 - Authentication schema foundation completed successfully
 - Backend prepared for JWT authentication implementation
+
+## 18 May 2026 — JWT Authentication Foundation
+
+Commit - <hash>
+
+### Completed
+
+- Configured JWT authentication infrastructure
+- Added access and refresh token generation
+- Added token expiration handling
+- Configured secure environment-based auth settings
+- Added httpOnly refresh cookie utilities
+- Configured bcrypt password hashing with passlib
+- Created JWT utility and authentication dependency layers
+- Added protected route and current-user authentication system
+- Added foundational refresh session validation structure
+- Verified JWT validation, expiration, and password hashing flows
+
+### Architecture Decisions
+
+- Separated access and refresh token responsibilities
+- Chose cookie-based refresh token strategy
+- Structured authentication logic into reusable service layers
+
+### Notes
+
+- Backend prepared for signup and login flow implementation
