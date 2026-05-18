@@ -298,7 +298,7 @@ Commit - ed704eb
 
 ## 18 May 2026 — OTP & Email Infrastructure
 
-Commit - <hash>
+Commit - 9c3803f
 
 ### Completed
 
@@ -324,3 +324,32 @@ Commit - <hash>
 
 - OTP and email infrastructure completed successfully
 - Backend prepared for signup and password reset flow implementation
+
+## 19 May 2026 — Local Signup Identity Flow
+
+Commit - <hash>
+
+### Completed
+
+- Implemented local signup identity verification flow
+- Added name and email based signup initiation
+- Added email normalization and name validation
+- Added OTP generation, hashing, expiration, and resend handling
+- Added pending signup session infrastructure
+- Added signup OTP verification flow
+- Added invalid OTP attempt tracking and protection
+- Added resumable signup session behavior without duplicate records
+- Added Mailtrap-based OTP email delivery integration
+- Verified OTP lifecycle, cooldown, expiration, and verification flows through testing
+
+### Architecture Decisions
+
+- Separated identity verification from final account creation
+- Designed signup flow around reusable pending signup sessions
+- Reused active signup state instead of creating duplicate temporary records
+- Kept OTP storage hash-only for security-focused MVP architecture
+
+### Notes
+
+- Signup identity verification flow completed successfully
+- Backend prepared for final username/password account creation flow

@@ -16,6 +16,8 @@ class User(SQLModel, table=True):
         default_factory=uuid.uuid4,
         primary_key=True,
     )
+    
+    name: str = Field(nullable=False)
 
     username: str = Field(
         index=True,

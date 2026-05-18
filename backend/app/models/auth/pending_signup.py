@@ -16,12 +16,7 @@ class PendingSignup(SQLModel, table=True):
         primary_key=True,
     )
 
-    username: str = Field(nullable=False)
-
-    username_normalized: str = Field(
-        nullable=False,
-        index=True,
-    )
+    name: str = Field(nullable=False)
 
     email: str = Field(
         nullable=False,

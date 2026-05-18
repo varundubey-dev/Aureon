@@ -1,0 +1,102 @@
+from sqlmodel import Session, select
+
+from app.core.enums import OTPPurpose
+
+from app.models.auth.user import User
+from app.models.auth.pending_signup import (
+    PendingSignup,
+)
+from app.models.auth.otp import OTP
+
+
+def normalize_email(
+    email: str,
+) -> str:
+    return email.strip().lower()
+
+
+def trim_name(
+    name: str,
+) -> str:
+    return name.strip()
+
+
+# TODO:
+# Name validation is intentionally simple for MVP.
+# Add profanity filtering, unicode normalization,
+# and advanced validation rules later.
+def validate_name(
+    name: str,
+) -> bool:
+
+    if len(name) < 2:
+        return False
+
+    if len(name) > 50:
+        return False
+
+    return True
+
+
+def is_email_taken(
+    session: Session,
+    email: str,
+) -> bool:
+
+    normalized_email = normalize_email(
+        email
+    )
+
+    existing_user = session.exec(
+        select(User).where(
+            User.email == normalized_email
+        )
+    ).first()
+
+    return existing_user is not None
+
+
+def get_pending_signup(
+    session: Session,
+    email: str,
+) -> PendingSignup | None:
+
+    normalized_email = normalize_email(
+        email
+    )
+
+    return session.exec(
+        select(PendingSignup).where(
+            PendingSignup.email == normalized_email
+        )
+    ).first()
+
+
+def get_signup_otp(
+    session: Session,
+    email: str,
+) -> OTP | None:
+
+    normalized_email = normalize_email(
+        email
+    )
+
+    return session.exec(
+        select(OTP).where(
+            OTP.email == normalized_email,
+            OTP.purpose == OTPPurpose.SIGNUP.value,
+        )
+    ).first()
+
+
+def has_active_signup_state(
+    session: Session,
+    email: str,
+) -> bool:
+
+    pending_signup = get_pending_signup(
+        session,
+        email,
+    )
+
+    return pending_signup is not None
