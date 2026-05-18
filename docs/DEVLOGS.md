@@ -271,7 +271,7 @@ Commit - 9e7c78b
 
 ## 18 May 2026 — JWT Authentication Foundation
 
-Commit - <hash>
+Commit - ed704eb
 
 ### Completed
 
@@ -295,3 +295,32 @@ Commit - <hash>
 ### Notes
 
 - Backend prepared for signup and login flow implementation
+
+## 18 May 2026 — OTP & Email Infrastructure
+
+Commit - <hash>
+
+### Completed
+
+- Added OTP generation, hashing, and verification utilities
+- Added OTP expiration, resend cooldown, and attempt limitation handling
+- Added reusable OTP service layer
+- Configured SMTP-based email infrastructure using Mailtrap
+- Created OTP email template system
+- Added reusable email sending service
+- Added email failure handling foundation
+- Added OTP verification state tracking
+- Generated and applied OTP schema migration
+- Verified full OTP generation and email delivery flow
+
+### Architecture Decisions
+
+- Reused active OTPs during resend cooldown window for better UX
+- Used hashed OTP storage instead of raw OTP persistence
+- Structured OTP and email logic into reusable service layers
+- Configured email infrastructure through environment-based settings
+
+### Notes
+
+- OTP and email infrastructure completed successfully
+- Backend prepared for signup and password reset flow implementation
