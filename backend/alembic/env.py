@@ -10,7 +10,7 @@ from sqlmodel import SQLModel
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 # Import models here so SQLModel registers them
-from app.models.user import User
+import app.models
 
 # Alembic Config object
 config = context.config

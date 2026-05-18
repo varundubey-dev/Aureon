@@ -221,7 +221,7 @@ Commit - 1b0932b
 
 ## 17 May 2026 — Frontend Communication & CORS Integration
 
-Commit - <commit_hash>
+Commit - 38977a2
 
 ### Completed
 
@@ -241,3 +241,30 @@ Commit - <commit_hash>
 ### Notes
 
 - Backend communication verified successfully from local frontend environment
+
+## 18 May 2026 — Core Authentication Database Architecture
+
+Commit - <your_commit_hash>
+
+### Completed
+
+- Created core authentication database schema using SQLModel and Alembic
+- Added UUID-based authentication models
+- Built `users`, `auth_providers`, `refresh_sessions`, `pending_signups`, and `otp_codes` tables
+- Added normalized username and unique email authentication structure
+- Added guest account and admin privilege support
+- Added provider linking architecture for future OAuth integration
+- Added refresh session infrastructure for JWT session management
+- Generated and applied authentication schema migration
+
+### Architecture Decisions
+
+- Used string-backed application enums instead of PostgreSQL native ENUM types
+- Separated authentication providers from core user identity
+- Designed signup flow around temporary pending signup records
+- Standardized UUID primary keys for scalability and API safety
+
+### Notes
+
+- Authentication schema foundation completed successfully
+- Backend prepared for JWT authentication implementation
