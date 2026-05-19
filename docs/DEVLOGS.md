@@ -389,7 +389,7 @@ Commit - 9db83d4
 
 ## 19 May 2026 — Signup Architecture Refactor
 
-Commit - <hash>
+Commit - 2754fd1
 
 ### Completed 
 
@@ -403,3 +403,36 @@ Commit - <hash>
 - Reduced signup route complexity and improved route readability
 - Standardized Python formatting across backend using Black formatter
 - Cleaned overall backend auth structure and reduced code clutter
+
+## 19 May 2026 — Login & Session Flow
+
+Commit - <hash>
+
+### Completed
+
+- Implemented login using username or email
+- Added secure password credential validation
+- Added access token generation flow
+- Added rotating refresh token architecture
+- Added persistent refresh session storage
+- Added refresh token rotation endpoint
+- Added logout endpoint with session revocation
+- Added automatic refresh cookie cleanup on invalid sessions
+- Added protected route dependency system
+- Added authenticated `/me` endpoint
+- Added reusable authenticated response builder
+- Verified login, refresh rotation, logout, protected route, and multi-session flows through testing
+
+### Architecture Decisions
+
+- Split access tokens and refresh tokens into separate auth channels
+- Used stateful refresh sessions with UUID-based session identifiers
+- Implemented refresh token rotation with immediate old-session revocation
+- Stored refresh tokens only inside HTTP-only cookies
+- Centralized authenticated response shaping through reusable session helpers
+- Built protected route system using FastAPI dependency injection
+
+### Notes
+
+- Core local authentication and session lifecycle completed successfully
+- Backend prepared for RBAC, frontend auth persistence, password reset, and OAuth integration

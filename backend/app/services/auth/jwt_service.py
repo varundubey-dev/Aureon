@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from jose import jwt, JWTError
@@ -30,36 +30,30 @@ def create_access_token(
 
 
 def create_refresh_token(
-    data: dict[str, Any],
+    user_id: str,
+    session_id: str,
 ) -> tuple[str, datetime]:
 
-    to_encode = data.copy()
-
     expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        days=(settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
 
-    to_encode.update(
-        {
-            "exp": expire,
-            "type": "refresh",
-        }
-    )
+    payload = {
+        "sub": user_id,
+        "jti": session_id,
+        "exp": expire,
+        "type": "refresh",
+    }
 
     token = jwt.encode(
-        to_encode,
+        payload,
         settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM,
+        algorithm=(settings.JWT_ALGORITHM),
     )
 
-    return token, expire
-
-
-def decode_token(token: str) -> dict:
-    return jwt.decode(
+    return (
         token,
-        settings.JWT_SECRET_KEY,
-        algorithms=[settings.JWT_ALGORITHM],
+        expire,
     )
 
 
@@ -107,6 +101,48 @@ def verify_signup_token(
             return None
 
         return email
+
+    except JWTError:
+        return None
+
+
+def verify_refresh_token(
+    token: str,
+) -> dict | None:
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+
+        if payload.get("type") != "refresh":
+            return None
+
+        return payload
+
+    except JWTError:
+        return None
+
+
+def verify_access_token(
+    token: str,
+) -> dict | None:
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+
+        if payload.get("type") != "access":
+            return None
+
+        return payload
 
     except JWTError:
         return None

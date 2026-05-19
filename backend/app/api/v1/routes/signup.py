@@ -25,7 +25,7 @@ from app.schemas.auth.signup import (
     UsernameAvailabilityRequest,
 )
 
-from app.services.auth.signup_service import (
+from app.services.auth.auth_service import (
     normalize_email,
     trim_name,
     validate_name,
@@ -542,6 +542,7 @@ def complete_signup(
     return build_auth_response(
         user,
         access_token,
+        "Signup completed successfully",
     )
 
 

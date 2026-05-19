@@ -190,3 +190,43 @@ def generate_username_suggestions(
             suggestions.append(candidate)
 
     return suggestions
+
+
+def get_user_by_email(
+    session: Session,
+    email: str,
+) -> User | None:
+
+    normalized_email = normalize_email(email)
+
+    return session.exec(select(User).where(User.email == normalized_email)).first()
+
+
+def get_user_by_username(
+    session: Session,
+    username: str,
+) -> User | None:
+
+    normalized_username = normalize_username(username)
+
+    return session.exec(
+        select(User).where(User.username_normalized == normalized_username)
+    ).first()
+
+
+def get_user_by_identifier(
+    session: Session,
+    identifier: str,
+) -> User | None:
+
+    if "@" in identifier:
+
+        return get_user_by_email(
+            session,
+            identifier,
+        )
+
+    return get_user_by_username(
+        session,
+        identifier,
+    )
