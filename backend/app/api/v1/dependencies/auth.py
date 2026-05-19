@@ -24,7 +24,10 @@ from app.services.auth.jwt_service import (
     verify_access_token,
 )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/v1/auth/login",
+    auto_error=False,
+)
 
 
 def get_current_user(
@@ -68,3 +71,30 @@ def get_current_user(
         )
 
     return user
+
+def get_optional_current_user(
+    token: str | None = Depends(
+        oauth2_scheme,
+    ),
+    session: Session = Depends(
+        get_session,
+    ),
+) -> User | None:
+
+    if not token:
+        return None
+
+    payload = verify_access_token(token)
+
+    if not payload:
+        return None
+
+    user_id = payload.get("sub")
+
+    if not user_id:
+        return None
+
+    return session.get(
+        User,
+        UUID(user_id),
+    )

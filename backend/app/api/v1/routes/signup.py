@@ -11,8 +11,8 @@ from fastapi import (
     status,
 )
 
-from sqlmodel import Session
-
+from sqlmodel import Session, select
+from app.api.v1.dependencies.auth import get_optional_current_user
 from app.core.database import (
     get_session,
 )
@@ -84,6 +84,10 @@ from app.models.auth.user import (
     User,
 )
 
+from app.models.auth.refresh_session import (
+    RefreshSession,
+)
+
 from app.models.auth.auth_provider import (
     AuthProvider,
 )
@@ -95,6 +99,7 @@ from app.models.auth.otp import (
 from app.core.enums import (
     AuthProviderType,
     OTPPurpose,
+    UserRole,
 )
 
 router = APIRouter(
@@ -107,11 +112,17 @@ router = APIRouter(
 def signup_request(
     request: SignupRequest,
     session: Session = Depends(get_session),
+    current_user: User | None = Depends(get_optional_current_user),
 ):
 
     normalized_email = normalize_email(request.email)
 
     trimmed_name = trim_name(request.name)
+
+    existing_user_id = None
+
+    if current_user and current_user.is_guest:
+        existing_user_id = current_user.id
 
     if not validate_name(trimmed_name):
         raise HTTPException(
@@ -123,7 +134,6 @@ def signup_request(
         session,
         normalized_email,
     ):
-
         raise HTTPException(
             status_code=(status.HTTP_400_BAD_REQUEST),
             detail="Email already exists",
@@ -152,7 +162,7 @@ def signup_request(
             if not is_resend_allowed(existing_otp.created_at):
                 raise HTTPException(
                     status_code=(status.HTTP_429_TOO_MANY_REQUESTS),
-                    detail=("OTP resend cooldown active"),
+                    detail="OTP resend cooldown active",
                 )
 
     otp = generate_otp()
@@ -175,22 +185,19 @@ def signup_request(
 
         otp_record = OTP(
             email=normalized_email,
-            purpose=(OTPPurpose.SIGNUP.value),
+            purpose=OTPPurpose.SIGNUP.value,
             otp_hash=hashed_otp,
-            expires_at=(otp_expiration),
+            expires_at=otp_expiration,
         )
 
     if existing_pending_signup:
 
         pending_signup = existing_pending_signup
-
         pending_signup.name = trimmed_name
-
         pending_signup.otp_hash = hashed_otp
-
         pending_signup.otp_expires_at = otp_expiration
-
         pending_signup.verified = False
+        pending_signup.existing_user_id = existing_user_id
 
     else:
 
@@ -198,8 +205,9 @@ def signup_request(
             name=trimmed_name,
             email=normalized_email,
             otp_hash=hashed_otp,
-            otp_expires_at=(otp_expiration),
+            otp_expires_at=otp_expiration,
             verified=False,
+            existing_user_id=existing_user_id,
         )
 
     session.add(otp_record)
@@ -224,7 +232,7 @@ def signup_request(
         )
 
     return {
-        "message": ("OTP sent successfully"),
+        "message": "OTP sent successfully",
     }
 
 
@@ -234,7 +242,7 @@ def verify_signup_otp(
     session: Session = Depends(get_session),
 ):
 
-    normalized_email = normalize_email(request.email)
+    normalized_email = normalize_email(request.email,)
 
     otp_record = get_signup_otp(
         session,
@@ -243,7 +251,7 @@ def verify_signup_otp(
 
     if not otp_record:
         raise HTTPException(
-            status_code=(status.HTTP_404_NOT_FOUND),
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="OTP not found",
         )
 
@@ -254,32 +262,36 @@ def verify_signup_otp(
 
     if not pending_signup:
         raise HTTPException(
-            status_code=(status.HTTP_500_INTERNAL_SERVER_ERROR),
-            detail=("Pending signup state corrupted"),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Pending signup state corrupted",
         )
 
     if pending_signup.verified:
         raise HTTPException(
-            status_code=(status.HTTP_400_BAD_REQUEST),
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Signup already verified",
         )
 
     if otp_record.verified:
         raise HTTPException(
-            status_code=(status.HTTP_400_BAD_REQUEST),
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP already verified",
         )
 
-    if is_otp_expired(otp_record.expires_at):
+    if is_otp_expired(
+        otp_record.expires_at,
+    ):
         raise HTTPException(
-            status_code=(status.HTTP_400_BAD_REQUEST),
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP expired",
         )
 
-    if has_exceeded_attempts(otp_record.attempts):
+    if has_exceeded_attempts(
+        otp_record.attempts,
+    ):
         raise HTTPException(
-            status_code=(status.HTTP_400_BAD_REQUEST),
-            detail=("Maximum OTP attempts exceeded"),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum OTP attempts exceeded",
         )
 
     if not verify_otp(
@@ -294,21 +306,20 @@ def verify_signup_otp(
         session.commit()
 
         raise HTTPException(
-            status_code=(status.HTTP_400_BAD_REQUEST),
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid OTP",
         )
 
     otp_record.verified = True
-
     pending_signup.verified = True
-
+    
     session.add(otp_record)
-
     session.add(pending_signup)
-
     session.commit()
 
-    signup_token = create_signup_token(normalized_email)
+    signup_token = create_signup_token(
+        normalized_email,
+    )
 
     username_suggestions = generate_username_suggestions(
         session,
@@ -316,7 +327,7 @@ def verify_signup_otp(
     )
 
     return {
-        "message": ("OTP verified successfully"),
+        "message": "OTP verified successfully",
         "signup_token": signup_token,
         "username_suggestions": (username_suggestions),
     }
@@ -328,7 +339,9 @@ def resend_signup_otp(
     session: Session = Depends(get_session),
 ):
 
-    normalized_email = normalize_email(request.email)
+    normalized_email = normalize_email(
+        request.email,
+    )
 
     otp_record = get_signup_otp(
         session,
@@ -337,7 +350,7 @@ def resend_signup_otp(
 
     if not otp_record:
         raise HTTPException(
-            status_code=(status.HTTP_404_NOT_FOUND),
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="OTP not found",
         )
 
@@ -348,32 +361,32 @@ def resend_signup_otp(
 
     if not pending_signup:
         raise HTTPException(
-            status_code=(status.HTTP_404_NOT_FOUND),
-            detail=("Pending signup not found"),
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pending signup not found",
         )
 
     if pending_signup.verified:
         raise HTTPException(
-            status_code=(status.HTTP_400_BAD_REQUEST),
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Signup already verified",
         )
 
     if otp_record.verified:
         raise HTTPException(
-            status_code=(status.HTTP_400_BAD_REQUEST),
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP already verified",
         )
 
-    if not is_resend_allowed(otp_record.created_at):
+    if not is_resend_allowed(
+        otp_record.created_at,
+    ):
         raise HTTPException(
-            status_code=(status.HTTP_429_TOO_MANY_REQUESTS),
-            detail=("OTP resend cooldown active"),
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="OTP resend cooldown active",
         )
 
     otp = generate_otp()
-
     hashed_otp = hash_otp(otp)
-
     otp_expiration = create_otp_expiration()
 
     reset_otp_record(
@@ -383,18 +396,16 @@ def resend_signup_otp(
     )
 
     pending_signup.otp_hash = hashed_otp
-
     pending_signup.otp_expires_at = otp_expiration
-
     pending_signup.verified = False
 
     session.add(otp_record)
-
     session.add(pending_signup)
-
     session.commit()
 
-    email_body = generate_otp_email_template(otp)
+    email_body = generate_otp_email_template(
+        otp,
+    )
 
     email_sent = send_email(
         recipient=normalized_email,
@@ -404,12 +415,12 @@ def resend_signup_otp(
 
     if not email_sent:
         raise HTTPException(
-            status_code=(status.HTTP_500_INTERNAL_SERVER_ERROR),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to resend OTP email",
         )
 
     return {
-        "message": ("OTP resent successfully"),
+        "message": "OTP resent successfully",
     }
 
 
@@ -482,35 +493,93 @@ def complete_signup(
 
     password_hash = hash_password(request.password)
 
-    profile_color = generate_profile_color()
+    # ==========================================
+    # Guest Upgrade Flow
+    # ==========================================
+    if pending_signup.existing_user_id:
 
-    user = User(
-        name=pending_signup.name,
-        username=request.username,
-        username_normalized=(normalized_username),
-        email=pending_signup.email,
-        password_hash=password_hash,
-        role=request.role,
-        is_admin=False,
-        is_guest=False,
-        profile_color=profile_color,
-        last_login_at=datetime.now(timezone.utc),
-    )
+        if request.role != UserRole.LISTENER.value:
+            raise HTTPException(
+                status_code=(status.HTTP_403_FORBIDDEN),
+                detail=("Guest accounts can only upgrade " "to listener accounts"),
+            )
 
-    session.add(user)
+        user = session.get(
+            User,
+            pending_signup.existing_user_id,
+        )
 
-    session.flush()
+        if not user:
+            raise HTTPException(
+                status_code=(status.HTTP_404_NOT_FOUND),
+                detail="Existing user not found",
+            )
 
-    auth_provider = AuthProvider(
-        user_id=user.id,
-        provider=(AuthProviderType.LOCAL.value),
-        provider_user_id=user.email,
-    )
+        user.name = pending_signup.name
+        user.username = request.username
+        user.username_normalized = normalized_username
+        user.email = pending_signup.email
+        user.password_hash = password_hash
+        user.role = UserRole.LISTENER.value
+        user.is_guest = False
+        user.last_login_at = datetime.now(timezone.utc)
+
+        # kill old guest access tokens
+        user.token_version += 1
+
+        # revoke old guest refresh sessions
+        refresh_sessions = session.exec(
+            select(RefreshSession).where(RefreshSession.user_id == user.id)
+        ).all()
+
+        for refresh_session in refresh_sessions:
+            session.delete(refresh_session)
+
+    # ==========================================
+    # Normal Signup Flow
+    # ==========================================
+    else:
+
+        profile_color = generate_profile_color()
+
+        user = User(
+            name=pending_signup.name,
+            username=request.username,
+            username_normalized=(normalized_username),
+            email=pending_signup.email,
+            password_hash=password_hash,
+            role=request.role,
+            is_admin=False,
+            is_guest=False,
+            profile_color=profile_color,
+            last_login_at=datetime.now(timezone.utc),
+        )
+
+        session.add(user)
+
+        session.flush()
+
+    existing_provider = session.exec(
+        select(AuthProvider).where(
+            AuthProvider.user_id == user.id,
+            AuthProvider.provider == AuthProviderType.LOCAL.value,
+        )
+    ).first()
+
+    if not existing_provider:
+
+        auth_provider = AuthProvider(
+            user_id=user.id,
+            provider=(AuthProviderType.LOCAL.value),
+            provider_user_id=signup_email,
+        )
+
+        session.add(auth_provider)
 
     access_token = create_access_token(
         {
             "sub": str(user.id),
-            "token_version": user.token_version,
+            "token_version": (user.token_version),
         }
     )
 
@@ -518,8 +587,6 @@ def complete_signup(
         refresh_token,
         refresh_session,
     ) = create_refresh_session(user.id)
-
-    session.add(auth_provider)
 
     session.add(refresh_session)
 

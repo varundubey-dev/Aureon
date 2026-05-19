@@ -17,26 +17,35 @@ class User(SQLModel, table=True):
         primary_key=True,
     )
 
-    name: str = Field(nullable=False)
-
-    username: str = Field(
-        index=True,
-        nullable=False,
+    name: Optional[str] = Field(
+        default=None,
+        nullable=True,
     )
 
-    username_normalized: str = Field(
+    username: Optional[str] = Field(
+        default=None,
         unique=True,
         index=True,
-        nullable=False,
+        nullable=True,
     )
 
-    email: str = Field(
+    username_normalized: Optional[str] = Field(
+        default=None,
         unique=True,
         index=True,
-        nullable=False,
+        nullable=True,
     )
 
-    password_hash: Optional[str] = Field(default=None)
+    email: Optional[str] = Field(
+        default=None,
+        unique=True,
+        index=True,
+        nullable=True,
+    )
+
+    password_hash: Optional[str] = Field(
+        default=None
+    )
 
     role: str = Field(
         default=UserRole.LISTENER.value,

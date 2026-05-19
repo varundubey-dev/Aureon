@@ -1,9 +1,8 @@
-# app/models/auth/pending_signup.py
-
 import uuid
 
 from datetime import datetime, timezone
 from uuid import UUID
+from typing import Optional
 
 from sqlmodel import SQLModel, Field
 
@@ -14,6 +13,13 @@ class PendingSignup(SQLModel, table=True):
     id: UUID = Field(
         default_factory=uuid.uuid4,
         primary_key=True,
+    )
+    
+    existing_user_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="users.id",
+        nullable=True,
+        unique=True,
     )
 
     name: str = Field(nullable=False)

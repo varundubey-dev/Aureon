@@ -1,24 +1,39 @@
 import random
-from sqlmodel import Session, select
 
-from app.core.enums import OTPPurpose, UserRole
+from sqlmodel import (
+    Session,
+    select,
+)
 
-from app.models.auth.user import User
+from app.core.enums import (
+    OTPPurpose,
+    UserRole,
+)
+
+from app.models.auth.user import (
+    User,
+)
+
 from app.models.auth.pending_signup import (
     PendingSignup,
 )
-from app.models.auth.otp import OTP
+
+from app.models.auth.otp import (
+    OTP,
+)
 
 
 def normalize_email(
     email: str,
 ) -> str:
+
     return email.strip().lower()
 
 
 def trim_name(
     name: str,
 ) -> str:
+
     return name.strip()
 
 
@@ -96,6 +111,7 @@ def has_active_signup_state(
 def normalize_username(
     username: str,
 ) -> str:
+
     return username.strip().lower()
 
 
@@ -109,7 +125,10 @@ def validate_username(
     if len(username) > 30:
         return False
 
-    return username.replace("_", "").isalnum()
+    return username.replace(
+        "_",
+        "",
+    ).isalnum()
 
 
 def is_username_taken(
@@ -148,13 +167,16 @@ PROFILE_COLORS = [
 
 
 def generate_profile_initial(
-    name: str,
+    name: str | None,
 ) -> str:
+
+    if not name:
+        return "G"
+
     return name[0].upper()
 
 
 def generate_profile_color() -> str:
-    import random
 
     return random.choice(PROFILE_COLORS)
 
@@ -230,3 +252,10 @@ def get_user_by_identifier(
         session,
         identifier,
     )
+
+
+def is_guest_user(
+    user: User,
+) -> bool:
+
+    return user.is_guest

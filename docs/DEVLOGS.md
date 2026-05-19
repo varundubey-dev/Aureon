@@ -439,7 +439,7 @@ Commit - f819272
 
 ## 20 May 2026 — Password Reset Flow
 
-Commit - <hash>
+Commit - 3cbe327
 
 ### Completed
 
@@ -461,3 +461,40 @@ Commit - <hash>
 - Reused OTP infrastructure with purpose-based separation
 - Separated password reset authorization using temporary reset JWTs
 - Revoked all refresh sessions after password reset for full account security reset
+
+## 20 May 2026 — Guest Account System
+
+Commit - <hash>
+
+### Completed
+
+- Implemented guest account creation flow
+- Restricted guest accounts to listener-only access
+- Added guest access token generation
+- Added guest refresh token generation
+- Added guest refresh session storage
+- Added guest permission restriction system
+- Added guest account upgrade flow
+- Added conversion of guest accounts into permanent accounts
+- Preserved guest user data during account upgrade
+- Added refresh session revocation during guest upgrade
+- Added guest access token invalidation using token versioning
+- Added support for upgrading guest accounts through existing signup flow
+- Added pending signup linkage using existing user references
+
+### Architecture Decisions
+
+- Reused existing signup infrastructure for guest upgrade flow
+- Used account conversion instead of creating a new user during upgrade
+- Preserved relational user data by upgrading the same database user row
+- Reused pending signup system instead of introducing separate guest upgrade tables
+- Used token versioning to invalidate old guest access tokens after upgrade
+- Revoked all guest refresh sessions during upgrade for security consistency
+- Kept guest accounts role-restricted to prevent unauthorized artist access
+- Allowed nullable identity fields to support temporary guest accounts
+
+### Notes
+
+- Current implementation is compatible with future OAuth onboarding flows
+- Guest accounts currently use nullable identity fields instead of generated temporary usernames
+- Future improvements may include guest cleanup jobs and auth flow service refactoring
