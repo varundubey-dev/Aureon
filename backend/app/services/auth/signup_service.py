@@ -1,6 +1,7 @@
+import random
 from sqlmodel import Session, select
 
-from app.core.enums import OTPPurpose
+from app.core.enums import OTPPurpose, UserRole
 
 from app.models.auth.user import User
 from app.models.auth.pending_signup import (
@@ -100,3 +101,129 @@ def has_active_signup_state(
     )
 
     return pending_signup is not None
+
+def normalize_username(
+    username: str,
+) -> str:
+    return username.strip().lower()
+
+
+def validate_username(
+    username: str,
+) -> bool:
+
+    if len(username) < 3:
+        return False
+
+    if len(username) > 30:
+        return False
+
+    return username.replace(
+        "_",
+        ""
+    ).isalnum()
+
+
+def is_username_taken(
+    session: Session,
+    username: str,
+) -> bool:
+
+    normalized_username = (
+        normalize_username(
+            username
+        )
+    )
+
+    existing_user = session.exec(
+        select(User).where(
+            User.username_normalized
+            == normalized_username
+        )
+    ).first()
+
+    return existing_user is not None
+
+
+def validate_public_role(
+    role: str,
+) -> bool:
+
+    allowed_roles = {
+        UserRole.LISTENER.value,
+        UserRole.ARTIST.value,
+    }
+
+    return role in allowed_roles
+
+PROFILE_COLORS = [
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#FFA94D",
+    "#A78BFA",
+]
+
+
+def generate_profile_initial(
+    name: str,
+) -> str:
+    return name[0].upper()
+
+
+def generate_profile_color() -> str:
+    import random
+
+    return random.choice(
+        PROFILE_COLORS
+    )
+
+def generate_username_suggestions(
+    session: Session,
+    name: str,
+) -> list[str]:
+
+    base_username = (
+        normalize_username(
+            name.replace(
+                " ",
+                ""
+            )
+        )
+    )
+
+    suggestions = []
+
+    if not is_username_taken(
+        session,
+        base_username,
+    ):
+        suggestions.append(
+            base_username
+        )
+
+    while len(suggestions) < 5:
+
+        random_number = random.randint(
+            100,
+            9999,
+        )
+
+        candidate = (
+            f"{base_username}"
+            f"{random_number}"
+        )
+
+        if (
+            candidate
+            not in suggestions
+            and not is_username_taken(
+                session,
+                candidate,
+            )
+        ):
+            suggestions.append(
+                candidate
+            )
+
+    return suggestions

@@ -327,7 +327,7 @@ Commit - 9c3803f
 
 ## 19 May 2026 — Local Signup Identity Flow
 
-Commit - <hash>
+Commit - 811fb8a
 
 ### Completed
 
@@ -353,3 +353,36 @@ Commit - <hash>
 
 - Signup identity verification flow completed successfully
 - Backend prepared for final username/password account creation flow
+
+## 19 May 2026 — Final Account Creation & Auto Login
+
+Commit - <hash>
+
+### Completed
+
+- Implemented verified signup completion flow
+- Added temporary signup token generation and validation
+- Added username normalization, validation, uniqueness, and suggestions
+- Added username availability check endpoint
+- Added password validation and weak password protection
+- Added public role restriction for signup APIs
+- Added persistent user account creation flow
+- Added local auth provider linking
+- Added access token and refresh token generation
+- Added hashed refresh session persistence
+- Added HTTP-only refresh token cookie support
+- Added auto-login after successful signup
+- Added cleanup for completed pending signup and OTP records
+- Verified signup completion, token lifecycle, cookie handling, and session flows through testing
+
+### Architecture Decisions
+
+- Separated verified signup state from final persistent account creation
+- Used temporary signup JWTs for secure completion authorization
+- Stored refresh tokens as HTTP-only cookies instead of response body
+- Kept username display value separate from normalized uniqueness value
+
+### Notes
+
+- Local signup lifecycle completed successfully
+- Backend prepared for login, refresh, and OAuth session flows

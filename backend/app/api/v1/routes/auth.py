@@ -3,14 +3,18 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Response,
     status,
 )
 from sqlmodel import Session
 from app.core.database import get_session
+from app.core.config import settings
 from app.schemas.auth.signup import (
     SignupRequest,
     VerifySignupOTPRequest,
     ResendSignupOTPRequest,
+    CompleteSignupRequest,
+    UsernameAvailabilityRequest,
 )
 from app.services.auth.signup_service import (
     normalize_email,
@@ -19,6 +23,12 @@ from app.services.auth.signup_service import (
     is_email_taken,
     get_pending_signup,
     get_signup_otp,
+    normalize_username,
+    validate_username,
+    is_username_taken,
+    validate_public_role,
+    generate_username_suggestions,
+    generate_profile_color,
 )
 from app.services.auth.email_templates import (
     generate_otp_email_template,
@@ -38,8 +48,29 @@ from app.services.auth.otp_service import (
 from app.models.auth.pending_signup import (
     PendingSignup,
 )
+from app.models.auth.user import User
+from app.models.auth.auth_provider import (
+    AuthProvider,
+)
+from app.models.auth.refresh_session import (
+    RefreshSession,
+)
+from app.services.auth.jwt_service import (
+    create_signup_token,
+    verify_signup_token,
+    create_access_token,
+    create_refresh_token,
+)
+from app.services.auth.password_service import (
+    validate_password_strength,
+    hash_password,
+)
 from app.models.auth.otp import OTP
-from app.core.enums import OTPPurpose
+from app.core.enums import (
+    UserRole,
+    AuthProviderType,
+    OTPPurpose,
+)
 
 
 router = APIRouter(
@@ -288,10 +319,24 @@ def verify_signup_otp(
 
     session.commit()
 
+    signup_token = create_signup_token(
+        normalized_email
+    )
+
+    username_suggestions = (
+        generate_username_suggestions(
+            session,
+            pending_signup.name,
+        )
+    )
+
     return {
         "message": "OTP verified successfully",
+        "signup_token": signup_token,
+        "username_suggestions": (
+            username_suggestions
+        ),
     }
-
 
 @router.post("/signup/resend")
 def resend_signup_otp(
@@ -395,4 +440,235 @@ def resend_signup_otp(
 
     return {
         "message": "OTP resent successfully",
+    }
+    
+@router.post("/signup/complete")
+def complete_signup(
+    request: CompleteSignupRequest,
+    response: Response,
+    session: Session = Depends(get_session),
+):
+
+    signup_email = verify_signup_token(
+        request.signup_token
+    )
+
+    if not signup_email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired signup token",
+        )
+
+    pending_signup = get_pending_signup(
+        session,
+        signup_email,
+    )
+
+    if not pending_signup:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pending signup not found",
+        )
+
+    if not pending_signup.verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Signup verification required",
+        )
+
+    normalized_username = (
+        normalize_username(
+            request.username
+        )
+    )
+
+    if not validate_username(
+        normalized_username
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid username format",
+        )
+
+    if is_username_taken(
+        session,
+        normalized_username,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken",
+        )
+
+    if (
+        request.password
+        != request.confirm_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match",
+        )
+
+    if not validate_password_strength(
+        request.password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Weak password",
+        )
+
+    if not validate_public_role(
+        request.role
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid public role",
+        )
+
+    password_hash = hash_password(
+        request.password
+    )
+
+    profile_color = (
+        generate_profile_color()
+    )
+
+    user = User(
+        name=pending_signup.name,
+        username=request.username,
+        username_normalized=(
+            normalized_username
+        ),
+        email=pending_signup.email,
+        password_hash=password_hash,
+        role=request.role,
+        is_admin=False,
+        is_guest=False,
+        profile_color=profile_color,
+        last_login_at=datetime.now(
+            timezone.utc
+        ),
+    )
+
+    session.add(user)
+
+    # Flush sends INSERT to DB
+    # without permanently committing.
+    # This allows safe access to user.id
+    # while keeping transaction atomic.
+    session.flush()
+
+    auth_provider = AuthProvider(
+        user_id=user.id,
+        provider=AuthProviderType.LOCAL.value,
+        provider_user_id=user.email,
+    )
+
+    access_token = create_access_token(
+        {
+            "sub": str(user.id),
+        }
+    )
+
+    refresh_token, refresh_expiration = (
+        create_refresh_token(
+            {
+                "sub": str(user.id),
+            }
+        )
+    )
+
+    refresh_session = RefreshSession(
+        user_id=user.id,
+        token_hash=hash_password(
+            refresh_token
+        ),
+        expires_at=refresh_expiration,
+    )
+
+    session.add(auth_provider)
+    session.add(refresh_session)
+
+    otp_record = get_signup_otp(
+        session,
+        signup_email,
+    )
+
+    if otp_record:
+        session.delete(otp_record)
+
+    session.delete(pending_signup)
+
+    session.commit()
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+
+        httponly=True,
+
+        # TODO:
+        # Enable secure=True in production
+        # after HTTPS deployment.
+        secure=False,
+
+        samesite="lax",
+
+        max_age=(
+            settings.REFRESH_TOKEN_EXPIRE_DAYS
+            * 24
+            * 60
+            * 60
+        ),
+    )
+
+    return {
+        "message": (
+            "Signup completed successfully"
+        ),
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "name": user.name,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+            "profile_color": (
+                user.profile_color
+            ),
+        },
+    }
+    
+@router.post("/username/check")
+def check_username_availability(
+    request: UsernameAvailabilityRequest,
+    session: Session = Depends(get_session),
+):
+
+    normalized_username = (
+        normalize_username(
+            request.username
+        )
+    )
+
+    if not validate_username(
+        normalized_username
+    ):
+        return {
+            "available": False,
+            "valid": False,
+        }
+
+    username_taken = (
+        is_username_taken(
+            session,
+            normalized_username,
+        )
+    )
+
+    return {
+        "available": (
+            not username_taken
+        ),
+        "valid": True,
     }
