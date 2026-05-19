@@ -97,6 +97,7 @@ def login(
     access_token = create_access_token(
         {
             "sub": str(user.id),
+            "token_version": user.token_version,
         }
     )
 
@@ -130,6 +131,7 @@ def refresh_access_token(
 
     if not refresh_token:
         clear_refresh_cookie(response)
+
         raise HTTPException(
             status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Refresh token missing",
@@ -139,6 +141,7 @@ def refresh_access_token(
 
     if not payload:
         clear_refresh_cookie(response)
+
         raise HTTPException(
             status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Invalid refresh token",
@@ -150,6 +153,7 @@ def refresh_access_token(
 
     if not user_id or not session_id:
         clear_refresh_cookie(response)
+
         raise HTTPException(
             status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Invalid refresh token",
@@ -166,6 +170,7 @@ def refresh_access_token(
 
     if not refresh_session:
         clear_refresh_cookie(response)
+
         raise HTTPException(
             status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Refresh session invalid",
@@ -176,6 +181,7 @@ def refresh_access_token(
         refresh_session.token_hash,
     ):
         clear_refresh_cookie(response)
+
         raise HTTPException(
             status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Refresh session invalid",
@@ -183,13 +189,29 @@ def refresh_access_token(
 
     if refresh_session.user_id != user_id:
         clear_refresh_cookie(response)
+
         raise HTTPException(
             status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Refresh session invalid",
         )
 
-    if refresh_session.expires_at < datetime.now(timezone.utc):
+    user = session.get(
+        User,
+        user_id,
+    )
+
+    if not user:
         clear_refresh_cookie(response)
+
+        raise HTTPException(
+            status_code=(status.HTTP_401_UNAUTHORIZED),
+            detail="User not found",
+        )
+
+    if refresh_session.expires_at < datetime.now(timezone.utc):
+
+        clear_refresh_cookie(response)
+
         session.delete(refresh_session)
 
         session.commit()
@@ -205,14 +227,15 @@ def refresh_access_token(
 
     access_token = create_access_token(
         {
-            "sub": str(user_id),
+            "sub": str(user.id),
+            "token_version": (user.token_version),
         }
     )
 
     (
         new_refresh_token,
         new_refresh_session,
-    ) = create_refresh_session(user_id)
+    ) = create_refresh_session(user.id)
 
     session.add(new_refresh_session)
 
@@ -266,11 +289,7 @@ def logout(
 
 @router.get("/me")
 def get_me(
-    current_user: User = Depends(
-        get_current_user
-    ),
+    current_user: User = Depends(get_current_user),
 ):
 
-    return build_auth_response(
-        current_user
-    )
+    return build_auth_response(current_user)

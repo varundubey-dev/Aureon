@@ -29,6 +29,27 @@ def create_access_token(
     )
 
 
+def verify_access_token(
+    token: str,
+) -> dict | None:
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+
+        if payload.get("type") != "access":
+            return None
+
+        return payload
+
+    except JWTError:
+        return None
+
+
 def create_refresh_token(
     user_id: str,
     session_id: str,
@@ -55,6 +76,27 @@ def create_refresh_token(
         token,
         expire,
     )
+
+
+def verify_refresh_token(
+    token: str,
+) -> dict | None:
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+
+        if payload.get("type") != "refresh":
+            return None
+
+        return payload
+
+    except JWTError:
+        return None
 
 
 def create_signup_token(
@@ -105,44 +147,54 @@ def verify_signup_token(
     except JWTError:
         return None
 
+def create_password_reset_token(
+    email: str,
+) -> str:
 
-def verify_refresh_token(
+    expiration = (
+        datetime.now(timezone.utc)
+        + timedelta(minutes=15)
+    )
+
+    payload = {
+        "sub": email,
+        "type": "password_reset",
+        "exp": expiration,
+    }
+
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+
+
+def verify_password_reset_token(
     token: str,
-) -> dict | None:
+) -> str | None:
 
     try:
 
         payload = jwt.decode(
             token,
             settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM],
+            algorithms=[
+                settings.JWT_ALGORITHM
+            ],
         )
 
-        if payload.get("type") != "refresh":
+        if (
+            payload.get("type")
+            != "password_reset"
+        ):
             return None
 
-        return payload
+        email = payload.get("sub")
 
-    except JWTError:
-        return None
-
-
-def verify_access_token(
-    token: str,
-) -> dict | None:
-
-    try:
-
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=[settings.JWT_ALGORITHM],
-        )
-
-        if payload.get("type") != "access":
+        if not email:
             return None
 
-        return payload
+        return email
 
     except JWTError:
         return None

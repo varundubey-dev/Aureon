@@ -406,7 +406,7 @@ Commit - 2754fd1
 
 ## 19 May 2026 — Login & Session Flow
 
-Commit - <hash>
+Commit - f819272
 
 ### Completed
 
@@ -436,3 +436,28 @@ Commit - <hash>
 
 - Core local authentication and session lifecycle completed successfully
 - Backend prepared for RBAC, frontend auth persistence, password reset, and OAuth integration
+
+## 20 May 2026 — Password Reset Flow
+
+Commit - <hash>
+
+### Completed
+
+- Implemented password reset request flow
+- Added silent handling for non-existing accounts
+- Added password reset OTP generation and delivery
+- Added password reset OTP verification flow
+- Added temporary password reset token generation
+- Added new password validation and secure hashing
+- Added global access token invalidation using token versioning
+- Added full refresh session revocation after password reset
+- Added automatic refresh cookie cleanup after reset
+- Added password reset OTP cleanup after successful completion
+- Verified password reset, token invalidation, refresh revocation, and forced re-login flows through testing
+
+### Architecture Decisions
+
+- Used token versioning for global access token invalidation
+- Reused OTP infrastructure with purpose-based separation
+- Separated password reset authorization using temporary reset JWTs
+- Revoked all refresh sessions after password reset for full account security reset
