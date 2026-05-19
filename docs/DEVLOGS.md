@@ -356,7 +356,7 @@ Commit - 811fb8a
 
 ## 19 May 2026 — Final Account Creation & Auto Login
 
-Commit - <hash>
+Commit - 9db83d4
 
 ### Completed
 
@@ -386,3 +386,20 @@ Commit - <hash>
 
 - Local signup lifecycle completed successfully
 - Backend prepared for login, refresh, and OAuth session flows
+
+## 19 May 2026 — Signup Architecture Refactor
+
+Commit - <hash>
+
+### Completed 
+
+- Split authentication routes into dedicated signup and login route modules
+- Refactored reusable OTP reset lifecycle logic into OTP service
+- Refactored refresh token cookie handling into session service
+- Refactored refresh session generation into session service
+- Refactored authenticated response builder into reusable session helper
+- Removed repeated refresh session creation logic from signup flow
+- Removed repeated OTP state reset logic from signup routes
+- Reduced signup route complexity and improved route readability
+- Standardized Python formatting across backend using Black formatter
+- Cleaned overall backend auth structure and reduced code clutter

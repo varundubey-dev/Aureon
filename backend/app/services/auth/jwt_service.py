@@ -15,10 +15,12 @@ def create_access_token(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
-    to_encode.update({
-        "exp": expire,
-        "type": "access",
-    })
+    to_encode.update(
+        {
+            "exp": expire,
+            "type": "access",
+        }
+    )
 
     return jwt.encode(
         to_encode,
@@ -33,17 +35,16 @@ def create_refresh_token(
 
     to_encode = data.copy()
 
-    expire = (
-        datetime.now(timezone.utc)
-        + timedelta(
-            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
-        )
+    expire = datetime.now(timezone.utc) + timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
 
-    to_encode.update({
-        "exp": expire,
-        "type": "refresh",
-    })
+    to_encode.update(
+        {
+            "exp": expire,
+            "type": "refresh",
+        }
+    )
 
     token = jwt.encode(
         to_encode,
@@ -61,13 +62,12 @@ def decode_token(token: str) -> dict:
         algorithms=[settings.JWT_ALGORITHM],
     )
 
+
 def create_signup_token(
     email: str,
 ) -> str:
 
-    expiration = datetime.now(
-        timezone.utc
-    ) + timedelta(
+    expiration = datetime.now(timezone.utc) + timedelta(
         minutes=settings.SIGNUP_TOKEN_EXPIRE_MINUTES
     )
 
@@ -93,21 +93,15 @@ def verify_signup_token(
         payload = jwt.decode(
             token,
             settings.JWT_SECRET_KEY,
-            algorithms=[
-                settings.JWT_ALGORITHM
-            ],
+            algorithms=[settings.JWT_ALGORITHM],
         )
 
-        token_type = payload.get(
-            "type"
-        )
+        token_type = payload.get("type")
 
         if token_type != "signup":
             return None
 
-        email = payload.get(
-            "sub"
-        )
+        email = payload.get("sub")
 
         if not email:
             return None

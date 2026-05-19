@@ -19,6 +19,7 @@ def verify_password(
         hashed_password,
     )
 
+
 COMMON_WEAK_PASSWORDS = {
     "password",
     "password123",
@@ -35,9 +36,7 @@ def validate_password_strength(
     if len(password) < 8:
         return False
 
-    if password.lower() in (
-        COMMON_WEAK_PASSWORDS
-    ):
+    if password.lower() in (COMMON_WEAK_PASSWORDS):
         return False
 
     return True

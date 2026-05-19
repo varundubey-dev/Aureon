@@ -13,13 +13,15 @@ class VerifySignupOTPRequest(BaseModel):
 
 class ResendSignupOTPRequest(BaseModel):
     email: EmailStr
-    
+
+
 class CompleteSignupRequest(BaseModel):
     signup_token: str
     username: str
     password: str
     confirm_password: str
     role: str
+
 
 class UsernameAvailabilityRequest(BaseModel):
     username: str

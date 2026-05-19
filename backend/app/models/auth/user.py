@@ -16,7 +16,7 @@ class User(SQLModel, table=True):
         default_factory=uuid.uuid4,
         primary_key=True,
     )
-    
+
     name: str = Field(nullable=False)
 
     username: str = Field(
@@ -51,8 +51,6 @@ class User(SQLModel, table=True):
 
     token_version: int = Field(default=0)
 
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     last_login_at: Optional[datetime] = Field(default=None)

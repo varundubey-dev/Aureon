@@ -4,10 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.core.database import settings
 
-app = FastAPI(
-    title="Aureon API",
-    version="1.0.0"
-)
+app = FastAPI(title="Aureon API", version="1.0.0")
 
 origins = [
     settings.FRONTEND_URL,

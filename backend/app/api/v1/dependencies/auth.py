@@ -4,10 +4,7 @@ from jose import JWTError
 
 from app.services.auth.jwt_service import decode_token
 
-
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/auth/login"
-)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def get_current_user(

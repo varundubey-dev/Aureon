@@ -31,8 +31,6 @@ class OTP(SQLModel, table=True):
 
     expires_at: datetime = Field(nullable=False)
 
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
-    
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
     verified: bool = Field(default=False)

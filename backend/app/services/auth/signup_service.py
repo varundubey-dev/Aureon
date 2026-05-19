@@ -44,14 +44,10 @@ def is_email_taken(
     email: str,
 ) -> bool:
 
-    normalized_email = normalize_email(
-        email
-    )
+    normalized_email = normalize_email(email)
 
     existing_user = session.exec(
-        select(User).where(
-            User.email == normalized_email
-        )
+        select(User).where(User.email == normalized_email)
     ).first()
 
     return existing_user is not None
@@ -62,14 +58,10 @@ def get_pending_signup(
     email: str,
 ) -> PendingSignup | None:
 
-    normalized_email = normalize_email(
-        email
-    )
+    normalized_email = normalize_email(email)
 
     return session.exec(
-        select(PendingSignup).where(
-            PendingSignup.email == normalized_email
-        )
+        select(PendingSignup).where(PendingSignup.email == normalized_email)
     ).first()
 
 
@@ -78,9 +70,7 @@ def get_signup_otp(
     email: str,
 ) -> OTP | None:
 
-    normalized_email = normalize_email(
-        email
-    )
+    normalized_email = normalize_email(email)
 
     return session.exec(
         select(OTP).where(
@@ -102,6 +92,7 @@ def has_active_signup_state(
 
     return pending_signup is not None
 
+
 def normalize_username(
     username: str,
 ) -> str:
@@ -118,10 +109,7 @@ def validate_username(
     if len(username) > 30:
         return False
 
-    return username.replace(
-        "_",
-        ""
-    ).isalnum()
+    return username.replace("_", "").isalnum()
 
 
 def is_username_taken(
@@ -129,17 +117,10 @@ def is_username_taken(
     username: str,
 ) -> bool:
 
-    normalized_username = (
-        normalize_username(
-            username
-        )
-    )
+    normalized_username = normalize_username(username)
 
     existing_user = session.exec(
-        select(User).where(
-            User.username_normalized
-            == normalized_username
-        )
+        select(User).where(User.username_normalized == normalized_username)
     ).first()
 
     return existing_user is not None
@@ -155,6 +136,7 @@ def validate_public_role(
     }
 
     return role in allowed_roles
+
 
 PROFILE_COLORS = [
     "#FF6B6B",
@@ -174,23 +156,15 @@ def generate_profile_initial(
 def generate_profile_color() -> str:
     import random
 
-    return random.choice(
-        PROFILE_COLORS
-    )
+    return random.choice(PROFILE_COLORS)
+
 
 def generate_username_suggestions(
     session: Session,
     name: str,
 ) -> list[str]:
 
-    base_username = (
-        normalize_username(
-            name.replace(
-                " ",
-                ""
-            )
-        )
-    )
+    base_username = normalize_username(name.replace(" ", ""))
 
     suggestions = []
 
@@ -198,9 +172,7 @@ def generate_username_suggestions(
         session,
         base_username,
     ):
-        suggestions.append(
-            base_username
-        )
+        suggestions.append(base_username)
 
     while len(suggestions) < 5:
 
@@ -209,21 +181,12 @@ def generate_username_suggestions(
             9999,
         )
 
-        candidate = (
-            f"{base_username}"
-            f"{random_number}"
-        )
+        candidate = f"{base_username}" f"{random_number}"
 
-        if (
-            candidate
-            not in suggestions
-            and not is_username_taken(
-                session,
-                candidate,
-            )
+        if candidate not in suggestions and not is_username_taken(
+            session,
+            candidate,
         ):
-            suggestions.append(
-                candidate
-            )
+            suggestions.append(candidate)
 
     return suggestions

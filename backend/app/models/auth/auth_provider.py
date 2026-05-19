@@ -42,6 +42,4 @@ class AuthProvider(SQLModel, table=True):
         index=True,
     )
 
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

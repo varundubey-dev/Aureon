@@ -17,9 +17,7 @@ def send_email(
         message["To"] = recipient
         message["Subject"] = subject
 
-        message.attach(
-            MIMEText(body, "html")
-        )
+        message.attach(MIMEText(body, "html"))
 
         with smtplib.SMTP(
             settings.SMTP_HOST,
