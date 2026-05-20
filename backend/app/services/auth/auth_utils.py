@@ -70,3 +70,24 @@ def generate_username_suggestions(
             suggestions.append(candidate)
 
     return suggestions
+
+def generate_available_username(
+    session: Session,
+    name: str,
+) -> tuple[str, str]:
+
+    suggestions = generate_username_suggestions(
+        session,
+        name,
+    )
+
+    username = suggestions[0]
+
+    normalized_username = normalize_username(
+        username,
+    )
+
+    return (
+        username,
+        normalized_username,
+    )

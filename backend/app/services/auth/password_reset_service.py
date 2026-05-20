@@ -22,6 +22,7 @@ from app.models.auth.refresh_session import (
 )
 
 from app.services.auth.auth_queries import (
+    get_local_auth_provider,
     get_user_by_email,
 )
 
@@ -64,17 +65,38 @@ def handle_password_reset_request(
     email: str,
 ):
 
-    normalized_email = normalize_email(email)
+    normalized_email = normalize_email(
+        email,
+    )
 
     user = get_user_by_email(
         session,
         normalized_email,
     )
 
+    # ==========================================
     # Silent success:
-    # Never reveal account existence.
+    # Never reveal account existence
+    # ==========================================
+
     if not user:
         return
+
+    # ==========================================
+    # Google-only accounts
+    # ==========================================
+
+    local_provider = get_local_auth_provider(
+        session,
+        user.id,
+    )
+
+    if not local_provider:
+
+        raise AuthError(
+            status.HTTP_403_FORBIDDEN,
+            ("Password reset unavailable for social login accounts"),
+        )
 
     existing_otp = session.exec(
         select(OTP).where(
@@ -85,18 +107,24 @@ def handle_password_reset_request(
 
     if existing_otp:
 
-        if not is_otp_expired(existing_otp.expires_at):
+        if not is_otp_expired(
+            existing_otp.expires_at,
+        ):
 
-            if not is_resend_allowed(existing_otp.created_at):
+            if not is_resend_allowed(
+                existing_otp.created_at,
+            ):
 
                 raise AuthError(
                     status.HTTP_429_TOO_MANY_REQUESTS,
-                    "OTP resend cooldown active",
+                    ("OTP resend cooldown active"),
                 )
 
     otp = generate_otp()
 
-    hashed_otp = hash_otp(otp)
+    hashed_otp = hash_otp(
+        otp,
+    )
 
     otp_expiration = create_otp_expiration()
 
@@ -114,12 +142,14 @@ def handle_password_reset_request(
 
         otp_record = OTP(
             email=normalized_email,
-            purpose=OTPPurpose.PASSWORD_RESET.value,
+            purpose=(OTPPurpose.PASSWORD_RESET.value),
             otp_hash=hashed_otp,
             expires_at=otp_expiration,
         )
 
-    session.add(otp_record)
+    session.add(
+        otp_record,
+    )
 
     session.commit()
 
@@ -129,7 +159,7 @@ def handle_password_reset_request(
 
     send_email(
         recipient=normalized_email,
-        subject="Aureon Password Reset OTP",
+        subject=("Aureon Password Reset OTP"),
         body=email_body,
     )
 
@@ -140,7 +170,9 @@ def handle_verify_password_reset_otp(
     otp: str,
 ):
 
-    normalized_email = normalize_email(email)
+    normalized_email = normalize_email(
+        email,
+    )
 
     otp_record = session.exec(
         select(OTP).where(
@@ -150,27 +182,35 @@ def handle_verify_password_reset_otp(
     ).first()
 
     if not otp_record:
+
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "OTP not found",
         )
 
     if otp_record.verified:
+
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP already verified",
         )
 
-    if is_otp_expired(otp_record.expires_at):
+    if is_otp_expired(
+        otp_record.expires_at,
+    ):
+
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP expired",
         )
 
-    if has_exceeded_attempts(otp_record.attempts):
+    if has_exceeded_attempts(
+        otp_record.attempts,
+    ):
+
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
-            "Maximum OTP attempts exceeded",
+            ("Maximum OTP attempts exceeded"),
         )
 
     if not verify_otp(
@@ -180,7 +220,9 @@ def handle_verify_password_reset_otp(
 
         otp_record.attempts += 1
 
-        session.add(otp_record)
+        session.add(
+            otp_record,
+        )
 
         session.commit()
 
@@ -191,7 +233,9 @@ def handle_verify_password_reset_otp(
 
     otp_record.verified = True
 
-    session.add(otp_record)
+    session.add(
+        otp_record,
+    )
 
     session.commit()
 
@@ -217,9 +261,10 @@ def handle_complete_password_reset(
     )
 
     if not reset_email:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
-            "Invalid or expired reset token",
+            ("Invalid or expired reset token"),
         )
 
     user = get_user_by_email(
@@ -228,18 +273,35 @@ def handle_complete_password_reset(
     )
 
     if not user:
+
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "User not found",
         )
 
-    if new_password != confirm_password:
+    local_provider = get_local_auth_provider(
+        session,
+        user.id,
+    )
+
+    if not local_provider:
+
         raise AuthError(
-            status.HTTP_400_BAD_REQUEST,
-            "Passwords do not match",
+            status.HTTP_403_FORBIDDEN,
+            ("Password reset unavailable for social login accounts"),
         )
 
-    if not validate_password_strength(new_password):
+    if new_password != confirm_password:
+
+        raise AuthError(
+            status.HTTP_400_BAD_REQUEST,
+            ("Passwords do not match"),
+        )
+
+    if not validate_password_strength(
+        new_password,
+    ):
+
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Weak password",
@@ -251,10 +313,15 @@ def handle_complete_password_reset(
 
     user.password_hash = password_hash
 
+    # ==========================================
     # Kill all access tokens
+    # ==========================================
+
     user.token_version += 1
 
-    session.add(user)
+    session.add(
+        user,
+    )
 
     refresh_sessions = session.exec(
         select(RefreshSession).where(
@@ -263,7 +330,10 @@ def handle_complete_password_reset(
     ).all()
 
     for refresh_session in refresh_sessions:
-        session.delete(refresh_session)
+
+        session.delete(
+            refresh_session,
+        )
 
     otp_record = session.exec(
         select(OTP).where(
@@ -273,6 +343,9 @@ def handle_complete_password_reset(
     ).first()
 
     if otp_record:
-        session.delete(otp_record)
+
+        session.delete(
+            otp_record,
+        )
 
     session.commit()

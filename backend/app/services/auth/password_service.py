@@ -1,4 +1,5 @@
 from passlib.context import CryptContext
+import secrets
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -40,3 +41,7 @@ def validate_password_strength(
         return False
 
     return True
+
+def generate_unusable_password_hash() -> str:
+    random_password = secrets.token_urlsafe(32)
+    return hash_password(random_password)

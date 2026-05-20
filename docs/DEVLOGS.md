@@ -501,7 +501,7 @@ Commit - dbded7a
 
 ## 20 May 2026 — Authentication Architecture Refactor
 
-Commit - <hash>
+Commit - fd395dc
 
 ### Completed
 
@@ -547,3 +547,62 @@ Commit - <hash>
 - OAuth onboarding can reuse existing token, session, and guest upgrade systems
 - Guest account upgrade flow remains fully compatible after refactor
 - Authentication system now follows a consistent service-query-validator architecture
+
+## 20 May 2026 — OAuth & Hybrid Authentication System
+
+Commit - <hash>
+
+### Completed
+
+- Added Google OAuth authentication flow
+- Added Google OAuth login endpoint
+- Added Google OAuth callback handling
+- Added OAuth provider linking system
+- Added dedicated OAuth service layer
+- Added OAuth onboarding flow for new users
+- Added OAuth signup completion endpoint
+- Added hybrid authentication support (OAuth + local login)
+- Added automatic username generation for OAuth users
+- Added unusable password generation for OAuth-only accounts
+- Added provider-aware login restrictions
+- Added provider-aware password reset restrictions
+- Added local account setup flow for OAuth-first users
+- Added OAuth-first → local authentication upgrade flow
+- Added guest → Google account upgrade flow
+- Added centralized OAuth signup token handling
+- Added OAuth onboarding token verification flow
+- Added reusable auth session creation helper
+- Added provider-aware account existence checks
+- Added OAuth provider database helpers
+- Added local provider existence helpers
+- Added centralized OAuth auth error handling
+- Added role-restricted guest upgrade enforcement
+- Added OAuth onboarding validation flow
+- Added provider-aware password reset protections
+- Added provider-aware login protections
+- Added OAuth session integration with refresh token rotation
+- Added OAuth compatibility with existing JWT architecture
+- Added OAuth compatibility with existing guest account system
+- Added OAuth compatibility with existing refresh session system
+
+### Architecture Decisions
+
+- Reused existing JWT/session infrastructure instead of creating parallel OAuth auth systems
+- Reused existing refresh token rotation architecture for OAuth sessions
+- Reused existing guest upgrade architecture for OAuth onboarding
+- Kept OAuth provider linking separate from core user model
+- Identified OAuth users by provider user ID instead of email
+- Prevented password login for OAuth-only accounts
+- Prevented password reset for OAuth-only accounts
+- Allowed optional local authentication setup for OAuth-first accounts
+- Avoided duplicate account creation by linking providers through verified email ownership
+- Kept route layer orchestration-focused with service-driven OAuth handling
+- Reused centralized auth validation and session layers across OAuth flows
+- Preserved compatibility across guest, local, and OAuth authentication systems
+
+### Notes
+
+- OAuth-first users can later enable local password login without creating duplicate accounts
+- Guest accounts can now upgrade directly into Google-authenticated accounts
+- Authentication system now supports guest, local, OAuth, and hybrid account states
+- OAuth onboarding now integrates cleanly into existing JWT and refresh session architecture

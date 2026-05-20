@@ -2,6 +2,7 @@ import uuid
 from uuid import UUID
 from typing import Any
 from fastapi import Response
+from datetime import datetime, timezone
 
 from sqlmodel import (
     Session,
@@ -14,6 +15,7 @@ from app.models.auth.refresh_session import (
 )
 
 from app.services.auth.auth_tokens import (
+    create_access_token,
     create_refresh_token,
 )
 
@@ -92,6 +94,41 @@ def clear_refresh_cookie(
         secure=False,
         samesite="lax",
         path="/",
+    )
+
+
+def create_user_auth_session(
+    session: Session,
+    user,
+):
+
+    user.last_login_at = datetime.now(
+        timezone.utc,
+    )
+
+    access_token = create_access_token(
+        {
+            "sub": str(user.id),
+            "token_version": user.token_version,
+        }
+    )
+
+    (
+        refresh_token,
+        refresh_session,
+    ) = create_refresh_session(
+        user.id,
+    )
+
+    session.add(
+        refresh_session,
+    )
+
+    session.commit()
+
+    return (
+        access_token,
+        refresh_token,
     )
 
 

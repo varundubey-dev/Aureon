@@ -64,7 +64,8 @@ def request_password_reset(
         raise_auth_error(exc)
 
     return {
-        "message": "If account exists, password reset OTP sent",
+        "type": "otp_sent",
+        "message": ("If account exists, password reset OTP sent"),
     }
 
 
@@ -86,6 +87,7 @@ def verify_password_reset_otp(
         raise_auth_error(exc)
 
     return {
+        "type": "otp_verified",
         "message": "OTP verified successfully",
         **result,
     }
@@ -115,5 +117,6 @@ def complete_password_reset(
     )
 
     return {
-        "message": "Password reset successful. Please login again.",
+        "type": "password_reset_completed",
+        "message": ("Password reset successful. Please login again."),
     }

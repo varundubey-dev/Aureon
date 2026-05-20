@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str
     SMTP_PASSWORD: str
     EMAIL_FROM: str
+    
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+    GOOGLE_REDIRECT_URI: str
+    SESSION_SECRET_KEY: str
 
 
 settings = Settings.model_validate({})

@@ -72,7 +72,9 @@ def raise_auth_error(
 def signup_request(
     request: SignupRequest,
     session: Session = Depends(get_session),
-    current_user: User | None = Depends(get_optional_current_user),
+    current_user: User | None = Depends(
+        get_optional_current_user,
+    ),
 ):
 
     existing_user_id = None
@@ -82,7 +84,7 @@ def signup_request(
 
     try:
 
-        handle_signup_request(
+        result = handle_signup_request(
             session=session,
             email=request.email,
             name=request.name,
@@ -90,9 +92,23 @@ def signup_request(
         )
 
     except AuthError as exc:
+
         raise_auth_error(exc)
 
+    # ==========================================
+    # Existing OAuth User Local Setup Flow
+    # ==========================================
+
+    if result:
+
+        return result
+
+    # ==========================================
+    # Normal OTP Signup Flow
+    # ==========================================
+
     return {
+        "type": "otp_verification",
         "message": "OTP sent successfully",
     }
 

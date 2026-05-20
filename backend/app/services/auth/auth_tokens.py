@@ -198,3 +198,50 @@ def verify_password_reset_token(
 
     except JWTError:
         return None
+
+def create_oauth_signup_token(
+    data: dict[str, Any],
+) -> str:
+
+    expiration = datetime.now(
+        timezone.utc,
+    ) + timedelta(
+        minutes=15,
+    )
+
+    payload = {
+        **data,
+        "type": "oauth_signup",
+        "exp": expiration,
+    }
+
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+
+def verify_oauth_signup_token(
+    token: str,
+) -> dict | None:
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[
+                settings.JWT_ALGORITHM,
+            ],
+        )
+
+        if (
+            payload.get("type")
+            != "oauth_signup"
+        ):
+            return None
+
+        return payload
+
+    except JWTError:
+        return None

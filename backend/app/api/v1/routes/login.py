@@ -83,11 +83,14 @@ def login(
         refresh_token,
     )
 
-    return build_auth_response(
-        user,
-        access_token,
-        "Login successful",
-    )
+    return {
+        "type": "authenticated",
+        **build_auth_response(
+            user,
+            access_token,
+            "Login successful",
+        ),
+    }
 
 
 @router.post("/refresh")
@@ -119,6 +122,7 @@ def refresh_access_token(
     )
 
     return {
+        "type": "token_refreshed",
         "access_token": access_token,
         "token_type": "bearer",
     }
@@ -139,6 +143,7 @@ def logout(
     clear_refresh_cookie(response)
 
     return {
+        "type": "logged_out",
         "message": "Logout successful",
     }
 
@@ -148,4 +153,9 @@ def get_me(
     current_user: User = Depends(get_current_user),
 ):
 
-    return build_auth_response(current_user)
+    return {
+        "type": "authenticated",
+        **build_auth_response(
+            current_user,
+        ),
+    }

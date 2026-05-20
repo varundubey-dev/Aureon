@@ -1,9 +1,6 @@
-from uuid import UUID
-
 from fastapi import (
     Depends,
     HTTPException,
-    status,
 )
 
 from fastapi.security import (
@@ -31,46 +28,50 @@ oauth2_scheme = OAuth2PasswordBearer(
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    session: Session = Depends(get_session),
+    token: str | None = Depends(
+        oauth2_scheme,
+    ),
+    session: Session = Depends(
+        get_session,
+    ),
 ) -> User:
 
-    payload = verify_access_token(token)
+    if not token:
+
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+        )
+
+    payload = verify_access_token(
+        token,
+    )
 
     if not payload:
+
         raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
+            status_code=401,
             detail="Invalid access token",
         )
 
-    user_id = payload.get("sub")
-
-    if not user_id:
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Invalid access token",
-        )
+    user_id = payload.get(
+        "sub",
+    )
 
     user = session.get(
         User,
-        UUID(user_id),
+        user_id,
     )
 
     if not user:
+
         raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
+            status_code=401,
             detail="User not found",
         )
 
-    token_version = payload.get("token_version")
-
-    if token_version != user.token_version:
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Token expired",
-        )
-
     return user
+
 
 def get_optional_current_user(
     token: str | None = Depends(
@@ -84,17 +85,18 @@ def get_optional_current_user(
     if not token:
         return None
 
-    payload = verify_access_token(token)
+    payload = verify_access_token(
+        token,
+    )
 
     if not payload:
         return None
 
-    user_id = payload.get("sub")
-
-    if not user_id:
-        return None
+    user_id = payload.get(
+        "sub",
+    )
 
     return session.get(
         User,
-        UUID(user_id),
+        user_id,
     )

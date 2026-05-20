@@ -1,35 +1,39 @@
-from datetime import (
-    datetime,
-    timezone,
-)
-
 from uuid import UUID
 
 from fastapi import status
 
 from sqlmodel import Session
 
-from app.models.auth.user import User
+from datetime import (
+    datetime,
+    timezone,
+)
+
+from app.core.exceptions.auth import (
+    AuthError,
+)
+
+from app.models.auth.user import (
+    User,
+)
 
 from app.services.auth.auth_queries import (
+    get_local_auth_provider,
     get_user_by_identifier,
+)
+
+from app.services.auth.auth_sessions import (
+    create_user_auth_session,
+    get_refresh_session_by_id,
+)
+
+from app.services.auth.auth_tokens import (
+    verify_refresh_token,
 )
 
 from app.services.auth.password_service import (
     verify_password,
 )
-
-from app.services.auth.auth_tokens import (
-    create_access_token,
-    verify_refresh_token,
-)
-
-from app.services.auth.auth_sessions import (
-    create_refresh_session,
-    get_refresh_session_by_id,
-)
-
-from app.core.exceptions.auth import AuthError
 
 
 def handle_login(
@@ -44,45 +48,52 @@ def handle_login(
     )
 
     if not user:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid credentials",
         )
 
+    local_provider = get_local_auth_provider(
+        session,
+        user.id,
+    )
+
+    # ==========================================
+    # OAuth-only account
+    # ==========================================
+
+    if not local_provider:
+
+        raise AuthError(
+            status.HTTP_403_FORBIDDEN,
+            ("This account uses social login. Please continue with Google."),
+        )
+
     if not user.password_hash:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
-            "Invalid credentials",
+            "Password login unavailable",
         )
 
     if not verify_password(
         password,
         user.password_hash,
     ):
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid credentials",
         )
 
-    user.last_login_at = datetime.now(timezone.utc)
-
-    session.add(user)
-
-    access_token = create_access_token(
-        {
-            "sub": str(user.id),
-            "token_version": user.token_version,
-        }
-    )
-
     (
+        access_token,
         refresh_token,
-        refresh_session,
-    ) = create_refresh_session(user.id)
-
-    session.add(refresh_session)
-
-    session.commit()
+    ) = create_user_auth_session(
+        session,
+        user,
+    )
 
     return (
         user,
@@ -97,6 +108,7 @@ def handle_refresh_token(
 ):
 
     if not refresh_token:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh token missing",
@@ -107,29 +119,34 @@ def handle_refresh_token(
     )
 
     if not payload:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid refresh token",
         )
 
-    user_id = payload.get("sub")
-    session_id = payload.get("jti")
+    user_id = payload.get(
+        "sub",
+    )
+
+    session_id = payload.get(
+        "jti",
+    )
 
     if not user_id or not session_id:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid refresh token",
         )
-
-    user_id = UUID(user_id)
-    session_id = UUID(session_id)
 
     refresh_session = get_refresh_session_by_id(
         session,
-        session_id,
+        UUID(session_id),
     )
 
     if not refresh_session:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh session invalid",
@@ -139,12 +156,14 @@ def handle_refresh_token(
         refresh_token,
         refresh_session.token_hash,
     ):
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh session invalid",
         )
 
-    if refresh_session.user_id != user_id:
+    if str(refresh_session.user_id) != user_id:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh session invalid",
@@ -152,10 +171,11 @@ def handle_refresh_token(
 
     user = session.get(
         User,
-        user_id,
+        UUID(user_id),
     )
 
     if not user:
+
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "User not found",
@@ -163,7 +183,9 @@ def handle_refresh_token(
 
     if refresh_session.expires_at < datetime.now(timezone.utc):
 
-        session.delete(refresh_session)
+        session.delete(
+            refresh_session,
+        )
 
         session.commit()
 
@@ -172,24 +194,23 @@ def handle_refresh_token(
             "Refresh token expired",
         )
 
-    # token rotation
-    session.delete(refresh_session)
+    # ==========================================
+    # Refresh token rotation
+    # ==========================================
 
-    access_token = create_access_token(
-        {
-            "sub": str(user.id),
-            "token_version": user.token_version,
-        }
+    session.delete(
+        refresh_session,
     )
 
-    (
-        new_refresh_token,
-        new_refresh_session,
-    ) = create_refresh_session(user.id)
-
-    session.add(new_refresh_session)
-
     session.commit()
+
+    (
+        access_token,
+        new_refresh_token,
+    ) = create_user_auth_session(
+        session,
+        user,
+    )
 
     return (
         access_token,
@@ -212,7 +233,9 @@ def handle_logout(
     if not payload:
         return
 
-    session_id = payload.get("jti")
+    session_id = payload.get(
+        "jti",
+    )
 
     if not session_id:
         return
@@ -225,6 +248,8 @@ def handle_logout(
     if not refresh_session:
         return
 
-    session.delete(refresh_session)
+    session.delete(
+        refresh_session,
+    )
 
     session.commit()

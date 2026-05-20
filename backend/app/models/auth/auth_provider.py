@@ -18,6 +18,11 @@ class AuthProvider(SQLModel, table=True):
             "provider_user_id",
             name="uq_provider_provider_user_id",
         ),
+        UniqueConstraint(
+            "user_id",
+            "provider",
+            name="uq_user_provider",
+    ),
     )
 
     id: UUID = Field(
