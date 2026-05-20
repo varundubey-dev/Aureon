@@ -64,3 +64,15 @@
     0 0 35px rgba(255, 215, 100, 0.08);
 
 }
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-primary);
+  transition: background-color 9999s ease-in-out 0s;
+  box-shadow: 0 0 0px 1000px var(--color-bg-primary) inset;
+  caret-color: var(--color-text-primary);
+}

@@ -8,7 +8,6 @@ interface PasswordFormProps {
   passwordError: string;
   confirmPasswordError: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  submitText?: string;
 }
 
 export default function PasswordForm({
@@ -17,7 +16,6 @@ export default function PasswordForm({
   passwordError,
   confirmPasswordError,
   onChange,
-  submitText = "Continue",
 }: PasswordFormProps) {
 
   return (
@@ -44,13 +42,6 @@ export default function PasswordForm({
         name="confirmPassword"
         onChange={onChange}
       />
-
-      <button
-        type="submit"
-        className="w-full mt-2 py-2.5 md:py-3 rounded-xl bg-accent-primary text-accent-text text-sm md:text-base font-semibold hover:opacity-80 cursor-pointer transition-all duration-300 ease-out"
-      >
-        {submitText}
-      </button>
 
     </>
   );

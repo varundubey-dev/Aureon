@@ -609,7 +609,7 @@ Commit - b644433
 
 ## 20 May 2026 — RBAC Authorization System
 
-Commit - <hash>
+Commit - a8de6a0
 
 ### Completed
 
@@ -632,3 +632,24 @@ Commit - <hash>
 - RBAC system now supports guest, listener, artist, and admin access control flows
 - Token invalidation now properly enforces token_version checks
 - Authorization layer is now ready for future protected business routes
+
+## 20 May 2026 — Auth UI Flow Improvements
+
+Commit - <hash>
+
+### Completed
+
+- Added guest continuation option to login and signup flows
+- Refactored signup into clearer multi-step onboarding flow
+- Added visual signup progress stepper
+- Added dedicated role selection step
+- Improved OTP form UX with resend cooldown support
+- Refactored password form button handling
+- Improved auth header responsiveness and layout stability
+- Improved responsive behavior across auth pages
+- Updated forgot password flow to match new OTP/password UI patterns
+
+### Notes
+
+- Signup flow now aligns with backend onboarding architecture
+- Role selection UI is now reusable for future OAuth onboarding flow

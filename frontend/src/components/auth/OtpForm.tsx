@@ -3,6 +3,9 @@ interface OtpFormProps {
   otpError: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: () => void;
+  onResend?: () => void;
+  resendCooldown?: number;
+  resendDisabled?: boolean;
   buttonText?: string;
 }
 
@@ -11,6 +14,9 @@ export default function OtpForm({
   otpError,
   onChange,
   onSubmit,
+  onResend,
+  resendCooldown = 0,
+  resendDisabled = false,
   buttonText = "Verify OTP",
 }: OtpFormProps) {
 
@@ -48,6 +54,29 @@ export default function OtpForm({
       >
         {buttonText}
       </button>
+
+      <div className="mt-4 text-center">
+
+        {resendCooldown > 0 ? (
+
+          <p className="text-xs md:text-sm text-text-secondary">
+            Resend OTP in {resendCooldown}s
+          </p>
+
+        ) : (
+
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={resendDisabled}
+            className="text-xs md:text-sm text-highlight-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all duration-300 ease-out"
+          >
+            Resend OTP
+          </button>
+
+        )}
+
+      </div>
 
     </>
   );

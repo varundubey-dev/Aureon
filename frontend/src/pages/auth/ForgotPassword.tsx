@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Mail } from "lucide-react";
@@ -15,6 +15,8 @@ export default function ForgotPassword() {
 
   const [step, setStep] = useState(1);
 
+  const [cooldown, setCooldown] = useState(30);
+
   const [credentials, setCredentials] = useState({
     email: "",
     otp: "",
@@ -27,7 +29,26 @@ export default function ForgotPassword() {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+
+    if (step !== 2) return;
+
+    if (cooldown <= 0) return;
+
+    const timer = setInterval(() => {
+
+      setCooldown((prev) => prev - 1);
+
+    }, 1000);
+
+    return () => clearInterval(timer);
+
+  }, [cooldown, step]);
+
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) {
+
     const { name, value } = e.target;
 
     setCredentials((prev) => ({
@@ -41,13 +62,24 @@ export default function ForgotPassword() {
     setEmailError("");
 
     if (!credentials.email.includes("@")) {
+
       setEmailError("Enter a valid email");
+
       return;
     }
 
     console.log("RESET OTP SENT");
 
+    setCooldown(30);
+
     setStep(2);
+  }
+
+  function handleResendOtp() {
+
+    console.log("RESET OTP RESENT");
+
+    setCooldown(30);
   }
 
   function handleVerifyOTP() {
@@ -55,7 +87,9 @@ export default function ForgotPassword() {
     setOtpError("");
 
     if (credentials.otp.length !== 6) {
+
       setOtpError("Enter a valid 6-digit OTP");
+
       return;
     }
 
@@ -64,19 +98,33 @@ export default function ForgotPassword() {
     setStep(3);
   }
 
-  function handleResetPassword(e: React.FormEvent<HTMLFormElement>) {
+  function handleResetPassword(
+    e: React.FormEvent<HTMLFormElement>,
+  ) {
+
     e.preventDefault();
 
     setPasswordError("");
     setConfirmPasswordError("");
 
     if (credentials.password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+
+      setPasswordError(
+        "Password must be at least 6 characters",
+      );
+
       return;
     }
 
-    if (credentials.password !== credentials.confirmPassword) {
-      setConfirmPasswordError("Passwords do not match");
+    if (
+      credentials.password !==
+      credentials.confirmPassword
+    ) {
+
+      setConfirmPasswordError(
+        "Passwords do not match",
+      );
+
       return;
     }
 
@@ -88,7 +136,7 @@ export default function ForgotPassword() {
   return (
     <AuthLayout>
 
-      <form
+      <form noValidate
         onSubmit={handleResetPassword}
         className="w-full max-w-md bg-bg-secondary p-5 sm:p-6 md:p-8 rounded-2xl border border-border-primary shadow-xl"
       >
@@ -148,19 +196,31 @@ export default function ForgotPassword() {
             otpError={otpError}
             onChange={handleChange}
             onSubmit={handleVerifyOTP}
+            resendCooldown={cooldown}
+            onResend={handleResendOtp}
           />
         )}
 
         {/* STEP 3 */}
         {step === 3 && (
-          <PasswordForm
-            password={credentials.password}
-            confirmPassword={credentials.confirmPassword}
-            passwordError={passwordError}
-            confirmPasswordError={confirmPasswordError}
-            onChange={handleChange}
-            submitText="Reset Password"
-          />
+          <>
+
+            <PasswordForm
+              password={credentials.password}
+              confirmPassword={credentials.confirmPassword}
+              passwordError={passwordError}
+              confirmPasswordError={confirmPasswordError}
+              onChange={handleChange}
+            />
+
+            <button
+              type="submit"
+              className="w-full mt-2 py-2.5 md:py-3 rounded-xl bg-accent-primary text-accent-text text-sm md:text-base font-semibold hover:opacity-80 cursor-pointer transition-all duration-300 ease-out"
+            >
+              Reset Password
+            </button>
+
+          </>
         )}
 
       </form>

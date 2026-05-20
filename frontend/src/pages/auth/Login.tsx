@@ -9,7 +9,6 @@ import AuthHeader from "../../components/auth/AuthHeader";
 import SocialAuth from "../../components/auth/SocialAuth";
 
 export default function Login() {
-
   const navigate = useNavigate();
 
   const [credentials, setCredentials] = useState({
@@ -55,16 +54,11 @@ export default function Login() {
 
   return (
     <AuthLayout>
-
-      <form
+      <form noValidate
         onSubmit={handleLogin}
         className="w-full max-w-md bg-bg-secondary p-5 sm:p-6 md:p-8 rounded-2xl border border-border-primary shadow-xl"
       >
-
-        <AuthHeader
-          title="Welcome Back!"
-          subtitle="Login to your account"
-        />
+        <AuthHeader title="Welcome Back!" subtitle="Login to your account" />
 
         <AuthInput
           label="Username or Email:"
@@ -90,7 +84,6 @@ export default function Login() {
 
         {/* Forgot Password */}
         <div className="flex justify-end mb-5 md:mb-6">
-
           <button
             type="button"
             onClick={() => navigate("/auth/forgot-password")}
@@ -98,7 +91,6 @@ export default function Login() {
           >
             Forgot Password?
           </button>
-
         </div>
 
         {/* Login Button */}
@@ -111,12 +103,24 @@ export default function Login() {
 
         <SocialAuth />
 
+        <div className="mt-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-border-primary" />
+
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="text-xs md:text-sm text-text-secondary hover:text-highlight-primary transition-all duration-300 ease-out whitespace-nowrap cursor-pointer"
+          >
+            Continue as Guest →
+          </button>
+
+          <div className="h-px flex-1 bg-border-primary" />
+        </div>
+
         {/* Signup */}
         <div className="mt-5 md:mt-6 text-center">
-
           <p className="text-xs md:text-sm text-text-secondary">
             Don&apos;t have an account?{" "}
-
             <button
               type="button"
               onClick={() => navigate("/auth/signup")}
@@ -124,13 +128,9 @@ export default function Login() {
             >
               Signup
             </button>
-
           </p>
-
         </div>
-
       </form>
-
     </AuthLayout>
   );
 }
