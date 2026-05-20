@@ -550,7 +550,7 @@ Commit - fd395dc
 
 ## 20 May 2026 — OAuth & Hybrid Authentication System
 
-Commit - <hash>
+Commit - b644433
 
 ### Completed
 
@@ -606,3 +606,29 @@ Commit - <hash>
 - Guest accounts can now upgrade directly into Google-authenticated accounts
 - Authentication system now supports guest, local, OAuth, and hybrid account states
 - OAuth onboarding now integrates cleanly into existing JWT and refresh session architecture
+
+## 20 May 2026 — RBAC Authorization System
+
+Commit - <hash>
+
+### Completed
+
+- Added reusable role-based authorization dependency
+- Added centralized RBAC route protection system
+- Added listener-only route protection
+- Added artist-only route protection
+- Added admin-only route protection
+- Added admin override access across protected routes
+- Added protected RBAC test routes
+- Added role validation dependency layer
+- Added authentication enforcement for protected routes
+- Added token-version validation inside auth dependency
+- Added optional authenticated user dependency support
+- Added unauthorized access protection
+- Added invalid token rejection handling
+
+### Notes
+
+- RBAC system now supports guest, listener, artist, and admin access control flows
+- Token invalidation now properly enforces token_version checks
+- Authorization layer is now ready for future protected business routes

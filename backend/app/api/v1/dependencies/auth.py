@@ -1,6 +1,7 @@
 from fastapi import (
     Depends,
     HTTPException,
+    status,
 )
 
 from fastapi.security import (
@@ -39,7 +40,7 @@ def get_current_user(
     if not token:
 
         raise HTTPException(
-            status_code=401,
+            status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Authentication required",
         )
 
@@ -50,7 +51,7 @@ def get_current_user(
     if not payload:
 
         raise HTTPException(
-            status_code=401,
+            status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="Invalid access token",
         )
 
@@ -66,8 +67,15 @@ def get_current_user(
     if not user:
 
         raise HTTPException(
-            status_code=401,
+            status_code=(status.HTTP_401_UNAUTHORIZED),
             detail="User not found",
+        )
+
+    if payload.get("token_version") != user.token_version:
+
+        raise HTTPException(
+            status_code=(status.HTTP_401_UNAUTHORIZED),
+            detail="Token expired",
         )
 
     return user
@@ -96,7 +104,16 @@ def get_optional_current_user(
         "sub",
     )
 
-    return session.get(
+    user = session.get(
         User,
         user_id,
     )
+
+    if not user:
+        return None
+
+    if payload.get("token_version") != user.token_version:
+
+        return None
+
+    return user
