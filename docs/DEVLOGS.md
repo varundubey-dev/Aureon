@@ -464,7 +464,7 @@ Commit - 3cbe327
 
 ## 20 May 2026 — Guest Account System
 
-Commit - <hash>
+Commit - dbded7a
 
 ### Completed
 
@@ -498,3 +498,52 @@ Commit - <hash>
 - Current implementation is compatible with future OAuth onboarding flows
 - Guest accounts currently use nullable identity fields instead of generated temporary usernames
 - Future improvements may include guest cleanup jobs and auth flow service refactoring
+
+## 20 May 2026 — Authentication Architecture Refactor
+
+Commit - <hash>
+
+### Completed
+
+- Refactored oversized auth route logic into dedicated service layers
+- Split authentication utilities into responsibility-based modules
+- Added centralized auth query layer
+- Added centralized auth validation layer
+- Added centralized auth token management layer
+- Added centralized auth session management layer
+- Added reusable auth utility helpers
+- Added dedicated login service layer
+- Added dedicated signup service layer
+- Added dedicated password reset service layer
+- Added dedicated guest account service layer
+- Added centralized auth exception handling
+- Refactored login route into thin orchestration layer
+- Refactored signup route into thin orchestration layer
+- Refactored password reset route into thin orchestration layer
+- Reduced direct database/query duplication across auth flows
+- Standardized auth flow architecture across all routes
+- Centralized JWT handling into reusable token service
+- Centralized refresh session handling into reusable session service
+- Centralized validation and normalization logic
+- Centralized reusable auth database lookups
+- Consolidated repository-wide gitignore configuration into root gitignore
+- Removed fragmented frontend/backend gitignore files
+
+### Architecture Decisions
+
+- Separated auth logic by responsibility instead of by route size
+- Kept route files intentionally thin and orchestration-focused
+- Split database query helpers into dedicated auth query layer
+- Split validation and normalization into pure validator layer
+- Isolated JWT logic into reusable token management service
+- Isolated refresh session and cookie handling into dedicated session service
+- Reused guest upgrade system through signup orchestration instead of separate onboarding flows
+- Centralized auth exceptions for consistent error handling
+- Preserved service-oriented architecture without overengineering into repository/controller patterns
+- Avoided excessive micro-file splitting to keep architecture readable and maintainable
+
+### Notes
+
+- OAuth onboarding can reuse existing token, session, and guest upgrade systems
+- Guest account upgrade flow remains fully compatible after refactor
+- Authentication system now follows a consistent service-query-validator architecture

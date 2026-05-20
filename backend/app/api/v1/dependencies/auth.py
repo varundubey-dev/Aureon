@@ -20,7 +20,7 @@ from app.models.auth.user import (
     User,
 )
 
-from app.services.auth.jwt_service import (
+from app.services.auth.auth_tokens import (
     verify_access_token,
 )
 

@@ -13,14 +13,14 @@ from app.models.auth.refresh_session import (
     RefreshSession,
 )
 
-from app.services.auth.jwt_service import (
+from app.services.auth.auth_tokens import (
     create_refresh_token,
 )
 
 from app.services.auth.password_service import (
     hash_password,
 )
-from app.services.auth.auth_service import (
+from app.services.auth.auth_utils import (
     generate_profile_initial,
 )
 
@@ -52,6 +52,17 @@ def create_refresh_session(
     )
 
 
+def get_refresh_session_by_id(
+    session: Session,
+    session_id: UUID,
+) -> RefreshSession | None:
+
+    return session.get(
+        RefreshSession,
+        session_id,
+    )
+
+
 def set_refresh_cookie(
     response: Response,
     refresh_token: str,
@@ -68,17 +79,6 @@ def set_refresh_cookie(
         samesite="lax",
         path="/",
         max_age=(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60),
-    )
-
-
-def get_refresh_session_by_id(
-    session: Session,
-    session_id: UUID,
-) -> RefreshSession | None:
-
-    return session.get(
-        RefreshSession,
-        session_id,
     )
 
 

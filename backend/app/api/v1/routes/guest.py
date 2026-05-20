@@ -1,8 +1,3 @@
-from datetime import (
-    datetime,
-    timezone,
-)
-
 from fastapi import (
     APIRouter,
     Depends,
@@ -11,30 +6,24 @@ from fastapi import (
 
 from sqlmodel import Session
 
-from app.core.database import (
-    get_session,
-)
+from app.core.database import get_session
 
-from app.core.enums import (
-    UserRole,
-)
-
-from app.models.auth.user import (
-    User,
-)
-
-from app.services.auth.auth_service import (
+from app.services.auth.auth_utils import (
     generate_profile_color,
 )
 
-from app.services.auth.jwt_service import (
+from app.services.auth.auth_tokens import (
     create_access_token,
 )
 
-from app.services.auth.session_service import (
+from app.services.auth.auth_sessions import (
+    build_auth_response,
     create_refresh_session,
     set_refresh_cookie,
-    build_auth_response,
+)
+
+from app.services.auth.guest_service import (
+    create_guest_user,
 )
 
 router = APIRouter(
@@ -49,41 +38,27 @@ def create_guest_account(
     session: Session = Depends(get_session),
 ):
 
-    guest_name = "Guest"
-
-    guest_user = User(
-        name=guest_name,
-        username=None,
-        username_normalized=None,
-        email=None,
-        password_hash=None,
-        role=UserRole.LISTENER.value,
-        is_admin=False,
-        is_guest=True,
-        profile_color=generate_profile_color(),
-        token_version=0,
-        created_at=datetime.now(timezone.utc),
-        last_login_at=datetime.now(timezone.utc),
-    )
+    guest_user = create_guest_user()
+    guest_user.profile_color = generate_profile_color()
 
     session.add(guest_user)
-
     session.flush()
 
     access_token = create_access_token(
         {
             "sub": str(guest_user.id),
-            "token_version": (guest_user.token_version),
+            "token_version": guest_user.token_version,
         }
     )
 
     (
         refresh_token,
         refresh_session,
-    ) = create_refresh_session(guest_user.id)
+    ) = create_refresh_session(
+        guest_user.id,
+    )
 
     session.add(refresh_session)
-
     session.commit()
 
     set_refresh_cookie(

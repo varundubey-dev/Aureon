@@ -1,14 +1,8 @@
-from datetime import (
-    datetime,
-    timezone,
-)
-from uuid import UUID
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     Response,
-    status,
     Cookie,
 )
 
@@ -22,27 +16,6 @@ from app.schemas.auth.login import (
     LoginRequest,
 )
 
-from app.services.auth.auth_service import (
-    get_user_by_identifier,
-)
-
-from app.services.auth.password_service import (
-    verify_password,
-)
-
-from app.services.auth.jwt_service import (
-    create_access_token,
-    verify_refresh_token,
-)
-
-from app.services.auth.session_service import (
-    create_refresh_session,
-    set_refresh_cookie,
-    clear_refresh_cookie,
-    build_auth_response,
-    get_refresh_session_by_id,
-)
-
 from app.models.auth.user import (
     User,
 )
@@ -51,10 +24,36 @@ from app.api.v1.dependencies.auth import (
     get_current_user,
 )
 
+from app.services.auth.auth_sessions import (
+    set_refresh_cookie,
+    clear_refresh_cookie,
+    build_auth_response,
+)
+
+from app.services.auth.login_service import (
+    handle_login,
+    handle_refresh_token,
+    handle_logout,
+)
+
+from app.core.exceptions.auth import (
+    AuthError,
+)
+
 router = APIRouter(
     prefix="/auth",
     tags=["Login"],
 )
+
+
+def raise_auth_error(
+    exc: AuthError,
+):
+
+    raise HTTPException(
+        status_code=exc.status_code,
+        detail=exc.detail,
+    )
 
 
 @router.post("/login")
@@ -64,51 +63,20 @@ def login(
     session: Session = Depends(get_session),
 ):
 
-    user = get_user_by_identifier(
-        session,
-        request.identifier,
-    )
+    try:
 
-    if not user:
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Invalid credentials",
+        (
+            user,
+            access_token,
+            refresh_token,
+        ) = handle_login(
+            session,
+            request.identifier,
+            request.password,
         )
 
-    if not user.password_hash:
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Invalid credentials",
-        )
-
-    if not verify_password(
-        request.password,
-        user.password_hash,
-    ):
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Invalid credentials",
-        )
-
-    user.last_login_at = datetime.now(timezone.utc)
-
-    session.add(user)
-
-    access_token = create_access_token(
-        {
-            "sub": str(user.id),
-            "token_version": user.token_version,
-        }
-    )
-
-    (
-        refresh_token,
-        refresh_session,
-    ) = create_refresh_session(user.id)
-
-    session.add(refresh_session)
-
-    session.commit()
+    except AuthError as exc:
+        raise_auth_error(exc)
 
     set_refresh_cookie(
         response,
@@ -129,117 +97,21 @@ def refresh_access_token(
     refresh_token: str | None = Cookie(default=None),
 ):
 
-    if not refresh_token:
-        clear_refresh_cookie(response)
+    try:
 
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Refresh token missing",
+        (
+            access_token,
+            new_refresh_token,
+        ) = handle_refresh_token(
+            session,
+            refresh_token,
         )
 
-    payload = verify_refresh_token(refresh_token)
-
-    if not payload:
-        clear_refresh_cookie(response)
-
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Invalid refresh token",
-        )
-
-    user_id = payload.get("sub")
-
-    session_id = payload.get("jti")
-
-    if not user_id or not session_id:
-        clear_refresh_cookie(response)
-
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Invalid refresh token",
-        )
-
-    user_id = UUID(user_id)
-
-    session_id = UUID(session_id)
-
-    refresh_session = get_refresh_session_by_id(
-        session,
-        session_id,
-    )
-
-    if not refresh_session:
-        clear_refresh_cookie(response)
-
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Refresh session invalid",
-        )
-
-    if not verify_password(
-        refresh_token,
-        refresh_session.token_hash,
-    ):
-        clear_refresh_cookie(response)
-
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Refresh session invalid",
-        )
-
-    if refresh_session.user_id != user_id:
-        clear_refresh_cookie(response)
-
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Refresh session invalid",
-        )
-
-    user = session.get(
-        User,
-        user_id,
-    )
-
-    if not user:
-        clear_refresh_cookie(response)
-
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="User not found",
-        )
-
-    if refresh_session.expires_at < datetime.now(timezone.utc):
+    except AuthError as exc:
 
         clear_refresh_cookie(response)
 
-        session.delete(refresh_session)
-
-        session.commit()
-
-        raise HTTPException(
-            status_code=(status.HTTP_401_UNAUTHORIZED),
-            detail="Refresh token expired",
-        )
-
-    # Refresh token rotation:
-    # old session dies immediately
-    session.delete(refresh_session)
-
-    access_token = create_access_token(
-        {
-            "sub": str(user.id),
-            "token_version": (user.token_version),
-        }
-    )
-
-    (
-        new_refresh_token,
-        new_refresh_session,
-    ) = create_refresh_session(user.id)
-
-    session.add(new_refresh_session)
-
-    session.commit()
+        raise_auth_error(exc)
 
     set_refresh_cookie(
         response,
@@ -259,26 +131,10 @@ def logout(
     refresh_token: str | None = Cookie(default=None),
 ):
 
-    if refresh_token:
-
-        payload = verify_refresh_token(refresh_token)
-
-        if payload:
-
-            session_id = payload.get("jti")
-
-            if session_id:
-
-                refresh_session = get_refresh_session_by_id(
-                    session,
-                    UUID(session_id),
-                )
-
-                if refresh_session:
-
-                    session.delete(refresh_session)
-
-                    session.commit()
+    handle_logout(
+        session,
+        refresh_token,
+    )
 
     clear_refresh_cookie(response)
 
