@@ -633,9 +633,9 @@ Commit - a8de6a0
 - Token invalidation now properly enforces token_version checks
 - Authorization layer is now ready for future protected business routes
 
-## 20 May 2026 — Auth UI Flow Improvements
+## 21 May 2026 — Auth UI Flow Improvements
 
-Commit - <hash>
+Commit - 177d7aa
 
 ### Completed
 
@@ -653,3 +653,25 @@ Commit - <hash>
 
 - Signup flow now aligns with backend onboarding architecture
 - Role selection UI is now reusable for future OAuth onboarding flow
+
+## 22 May 2026 — Auth Session Optimization & Async Email System
+
+Commit - <hash>
+
+### Completed
+
+- Moved auth email delivery to FastAPI background tasks
+- Improved OTP request response speed
+- Added async signup OTP email handling
+- Added async password reset OTP email handling
+- Added resend OTP async delivery flow
+- Refactored refresh token session handling
+- Improved refresh token validation flow
+- Improved auth session lifecycle handling
+- Improved auth response consistency
+
+### Notes
+
+- OTP APIs now return immediately without waiting for SMTP delivery
+- Email failures no longer block request completion
+- Refresh session flow is now cleaner and more scalable

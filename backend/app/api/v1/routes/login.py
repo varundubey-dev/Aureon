@@ -103,6 +103,7 @@ def refresh_access_token(
     try:
 
         (
+            user,
             access_token,
             new_refresh_token,
         ) = handle_refresh_token(
@@ -112,19 +113,21 @@ def refresh_access_token(
 
     except AuthError as exc:
 
-        clear_refresh_cookie(response)
-
         raise_auth_error(exc)
 
-    set_refresh_cookie(
-        response,
-        new_refresh_token,
-    )
+    if new_refresh_token:
+
+        set_refresh_cookie(
+            response,
+            new_refresh_token,
+        )
 
     return {
-        "type": "token_refreshed",
-        "access_token": access_token,
-        "token_type": "bearer",
+        "type": "authenticated",
+        **build_auth_response(
+            user,
+            access_token,
+        ),
     }
 
 

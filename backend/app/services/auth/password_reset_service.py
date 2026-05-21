@@ -35,10 +35,6 @@ from app.services.auth.auth_tokens import (
     verify_password_reset_token,
 )
 
-from app.services.auth.email_service import (
-    send_email,
-)
-
 from app.services.auth.email_templates import (
     generate_password_reset_email_template,
 )
@@ -80,7 +76,8 @@ def handle_password_reset_request(
     # ==========================================
 
     if not user:
-        return
+
+        return {}
 
     # ==========================================
     # Google-only accounts
@@ -95,7 +92,7 @@ def handle_password_reset_request(
 
         raise AuthError(
             status.HTTP_403_FORBIDDEN,
-            ("Password reset unavailable for social login accounts"),
+            "Password reset unavailable for social login accounts",
         )
 
     existing_otp = session.exec(
@@ -117,7 +114,7 @@ def handle_password_reset_request(
 
                 raise AuthError(
                     status.HTTP_429_TOO_MANY_REQUESTS,
-                    ("OTP resend cooldown active"),
+                    "OTP resend cooldown active",
                 )
 
     otp = generate_otp()
@@ -142,7 +139,7 @@ def handle_password_reset_request(
 
         otp_record = OTP(
             email=normalized_email,
-            purpose=(OTPPurpose.PASSWORD_RESET.value),
+            purpose=OTPPurpose.PASSWORD_RESET.value,
             otp_hash=hashed_otp,
             expires_at=otp_expiration,
         )
@@ -157,11 +154,110 @@ def handle_password_reset_request(
         otp,
     )
 
-    send_email(
-        recipient=normalized_email,
-        subject=("Aureon Password Reset OTP"),
-        body=email_body,
+    return {
+        "email_data": {
+            "recipient": normalized_email,
+            "subject": "Aureon Password Reset OTP",
+            "body": email_body,
+        }
+    }
+
+
+def handle_password_reset_resend_otp(
+    session: Session,
+    email: str,
+):
+
+    normalized_email = normalize_email(
+        email,
     )
+
+    user = get_user_by_email(
+        session,
+        normalized_email,
+    )
+
+    # ==========================================
+    # Silent success
+    # ==========================================
+
+    if not user:
+
+        return {}
+
+    local_provider = get_local_auth_provider(
+        session,
+        user.id,
+    )
+
+    if not local_provider:
+
+        raise AuthError(
+            status.HTTP_403_FORBIDDEN,
+            "Password reset unavailable for social login accounts",
+        )
+
+    otp_record = session.exec(
+        select(OTP).where(
+            OTP.email == normalized_email,
+            OTP.purpose == OTPPurpose.PASSWORD_RESET.value,
+        )
+    ).first()
+
+    if not otp_record:
+
+        raise AuthError(
+            status.HTTP_404_NOT_FOUND,
+            "OTP not found",
+        )
+
+    if otp_record.verified:
+
+        raise AuthError(
+            status.HTTP_400_BAD_REQUEST,
+            "OTP already verified",
+        )
+
+    if not is_resend_allowed(
+        otp_record.created_at,
+    ):
+
+        raise AuthError(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "OTP resend cooldown active",
+        )
+
+    otp = generate_otp()
+
+    hashed_otp = hash_otp(
+        otp,
+    )
+
+    otp_expiration = create_otp_expiration()
+
+    reset_otp_record(
+        otp_record,
+        hashed_otp,
+        otp_expiration,
+    )
+
+    session.add(
+        otp_record,
+    )
+
+    session.commit()
+
+    email_body = generate_password_reset_email_template(
+        otp,
+    )
+
+    return {
+        "email_data": {
+            "recipient": normalized_email,
+            "subject": "Aureon Password Reset OTP",
+            "body": email_body,
+        }
+    }
 
 
 def handle_verify_password_reset_otp(

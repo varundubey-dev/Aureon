@@ -5,7 +5,7 @@ from fastapi import Response
 from datetime import datetime, timezone
 
 from sqlmodel import (
-    Session,
+    Session, select
 )
 
 from app.core.config import settings
@@ -59,10 +59,13 @@ def get_refresh_session_by_id(
     session_id: UUID,
 ) -> RefreshSession | None:
 
-    return session.get(
-        RefreshSession,
-        session_id,
+    statement = (
+        select(RefreshSession)
+        .where(RefreshSession.id == session_id)
+        .with_for_update()
     )
+
+    return session.exec(statement).first()
 
 
 def set_refresh_cookie(
@@ -130,6 +133,14 @@ def create_user_auth_session(
         access_token,
         refresh_token,
     )
+    
+def create_access_token_only(user):
+    return create_access_token(
+        {
+            "sub": str(user.id),
+            "token_version": user.token_version,
+        }
+    )
 
 
 def build_auth_response(
@@ -145,8 +156,11 @@ def build_auth_response(
             "username": user.username,
             "email": user.email,
             "role": user.role,
-            "profile_color": (user.profile_color),
-            "profile_initial": (generate_profile_initial(user.name)),
+            "is_admin": user.is_admin,
+            "is_guest": user.is_guest,
+            "profile_color": user.profile_color,
+            "profile_initial": generate_profile_initial(user.name),
+            "created_at": user.created_at,
         },
     }
 

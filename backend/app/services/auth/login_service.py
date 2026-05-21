@@ -29,10 +29,13 @@ from app.services.auth.auth_sessions import (
 
 from app.services.auth.auth_tokens import (
     verify_refresh_token,
+    create_refresh_token,
+    create_access_token,
 )
 
 from app.services.auth.password_service import (
     verify_password,
+    hash_password,
 )
 
 
@@ -94,6 +97,8 @@ def handle_login(
         session,
         user,
     )
+
+    session.commit()
 
     return (
         user,
@@ -195,24 +200,50 @@ def handle_refresh_token(
         )
 
     # ==========================================
-    # Refresh token rotation
+    # Sliding refresh session
     # ==========================================
 
-    session.delete(
-        refresh_session,
+    now = datetime.now(timezone.utc)
+
+    remaining_time = (refresh_session.expires_at - now).days
+
+    # Default:
+    # Keep SAME refresh token
+    new_refresh_token = None
+
+    # Renew ONLY near expiry
+    if remaining_time <= 7:
+
+        (
+            new_refresh_token,
+            new_expiration,
+        ) = create_refresh_token(
+            str(user.id),
+            str(refresh_session.id),
+        )
+
+        refresh_session.token_hash = hash_password(
+            new_refresh_token,
+        )
+
+        refresh_session.expires_at = new_expiration
+
+        session.add(
+            refresh_session,
+        )
+
+    # New short-lived access token
+    access_token = create_access_token(
+        {
+            "sub": str(user.id),
+            "token_version": user.token_version,
+        }
     )
 
     session.commit()
 
-    (
-        access_token,
-        new_refresh_token,
-    ) = create_user_auth_session(
-        session,
-        user,
-    )
-
     return (
+        user,
         access_token,
         new_refresh_token,
     )

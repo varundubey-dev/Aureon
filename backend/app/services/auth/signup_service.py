@@ -63,10 +63,6 @@ from app.services.auth.auth_validators import (
     validate_username,
 )
 
-from app.services.auth.email_service import (
-    send_email,
-)
-
 from app.services.auth.email_templates import (
     generate_otp_email_template,
 )
@@ -177,10 +173,22 @@ def handle_signup_request(
 
     if existing_pending_signup and existing_pending_signup.verified:
 
-        raise AuthError(
-            status.HTTP_400_BAD_REQUEST,
-            "Signup already verified",
+        signup_token = create_signup_token(
+            normalized_email,
         )
+
+        username_suggestions = generate_username_suggestions(
+            session,
+            existing_pending_signup.name,
+        )
+
+        return {
+            "type": "resume_signup",
+            "signup_token": signup_token,
+            "email": normalized_email,
+            "name": existing_pending_signup.name,
+            "username_suggestions": username_suggestions,
+        }
 
     if existing_otp:
 
@@ -253,24 +261,21 @@ def handle_signup_request(
         pending_signup,
     )
 
-    session.commit()
-
     email_body = generate_otp_email_template(
         otp,
     )
 
-    email_sent = send_email(
-        recipient=normalized_email,
-        subject="Aureon Signup OTP",
-        body=email_body,
-    )
+    session.commit()
 
-    if not email_sent:
-
-        raise AuthError(
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "Failed to send OTP email",
-        )
+    return {
+        "type": "otp_verification",
+        "message": "OTP sent successfully",
+        "email_data": {
+            "recipient": normalized_email,
+            "subject": "Aureon Signup OTP",
+            "body": email_body,
+        },
+    }
 
 
 def handle_verify_signup_otp(
@@ -468,24 +473,19 @@ def handle_resend_signup_otp(
         pending_signup,
     )
 
-    session.commit()
-
     email_body = generate_otp_email_template(
         otp,
     )
 
-    email_sent = send_email(
-        recipient=normalized_email,
-        subject="Aureon Signup OTP",
-        body=email_body,
-    )
+    session.commit()
 
-    if not email_sent:
-
-        raise AuthError(
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "Failed to resend OTP email",
-        )
+    return {
+        "email_data": {
+            "recipient": normalized_email,
+            "subject": "Aureon Signup OTP",
+            "body": email_body,
+        },
+    }
 
 
 def handle_complete_signup(

@@ -1,8 +1,10 @@
 import smtplib
+from fastapi import status
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from app.core.config import settings
+from app.core.exceptions.auth import AuthError
 
 
 def send_email(
@@ -35,7 +37,16 @@ def send_email(
 
         return True
 
+    except smtplib.SMTPException:
+
+        raise AuthError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Email service temporarily unavailable",
+        )
+
     except Exception:
-        # TODO:
-        # Replace with proper logging system later.
-        return False
+
+        raise AuthError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "Failed to send email",
+        )

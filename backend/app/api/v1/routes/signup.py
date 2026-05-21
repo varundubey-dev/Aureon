@@ -3,6 +3,7 @@ from fastapi import (
     Depends,
     HTTPException,
     Response,
+    BackgroundTasks,
 )
 
 from sqlmodel import Session
@@ -13,6 +14,10 @@ from app.api.v1.dependencies.auth import (
 
 from app.core.database import (
     get_session,
+)
+
+from app.services.auth.email_service import (
+    send_email,
 )
 
 from app.core.exceptions.auth import (
@@ -71,6 +76,7 @@ def raise_auth_error(
 @router.post("/signup/request")
 def signup_request(
     request: SignupRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User | None = Depends(
         get_optional_current_user,
@@ -96,21 +102,29 @@ def signup_request(
         raise_auth_error(exc)
 
     # ==========================================
-    # Existing OAuth User Local Setup Flow
+    # Background Email Sending
     # ==========================================
 
-    if result:
+    email_data = result.pop(
+        "email_data",
+        None,
+    )
 
-        return result
+    if email_data:
 
-    # ==========================================
-    # Normal OTP Signup Flow
-    # ==========================================
+        # TODO:
+        # Add proper retry queue later
+        # Log SMTP failures
+        # Move to Celery/Redis worker eventually
 
-    return {
-        "type": "otp_verification",
-        "message": "OTP sent successfully",
-    }
+        background_tasks.add_task(
+            send_email,
+            recipient=email_data["recipient"],
+            subject=email_data["subject"],
+            body=email_data["body"],
+        )
+
+    return result
 
 
 @router.post("/signup/verify")
@@ -128,6 +142,7 @@ def verify_signup_otp(
         )
 
     except AuthError as exc:
+
         raise_auth_error(exc)
 
     return {
@@ -139,18 +154,40 @@ def verify_signup_otp(
 @router.post("/signup/resend")
 def resend_signup_otp(
     request: ResendSignupOTPRequest,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
 ):
 
     try:
 
-        handle_resend_signup_otp(
+        result = handle_resend_signup_otp(
             session=session,
             email=request.email,
         )
 
     except AuthError as exc:
+
         raise_auth_error(exc)
+
+    # ==========================================
+    # Background Email Sending
+    # ==========================================
+
+    email_data = result.get(
+        "email_data",
+    )
+
+    if email_data:
+
+        # TODO:
+        # Add retry queue + logging later
+
+        background_tasks.add_task(
+            send_email,
+            recipient=email_data["recipient"],
+            subject=email_data["subject"],
+            body=email_data["body"],
+        )
 
     return {
         "message": "OTP resent successfully",
@@ -180,6 +217,7 @@ def complete_signup(
         )
 
     except AuthError as exc:
+
         raise_auth_error(exc)
 
     set_refresh_cookie(
