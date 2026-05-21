@@ -31,6 +31,7 @@
 - react-router-dom
 - react-icons
 - lucide-react
+- axios
 
 ### Dev Dependencies
 

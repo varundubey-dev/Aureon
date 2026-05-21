@@ -30,6 +30,7 @@ export default function PasswordForm({
         value={password}
         name="password"
         onChange={onChange}
+        showPasswordToggle
       />
 
       <AuthInput
@@ -41,6 +42,7 @@ export default function PasswordForm({
         value={confirmPassword}
         name="confirmPassword"
         onChange={onChange}
+        showPasswordToggle
       />
 
     </>

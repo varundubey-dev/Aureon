@@ -7,6 +7,7 @@ interface OtpFormProps {
   resendCooldown?: number;
   resendDisabled?: boolean;
   buttonText?: string;
+  otpResent: boolean;
 }
 
 export default function OtpForm({
@@ -18,13 +19,11 @@ export default function OtpForm({
   resendCooldown = 0,
   resendDisabled = false,
   buttonText = "Verify OTP",
+  otpResent
 }: OtpFormProps) {
-
   return (
     <>
-
       <div className="mb-5">
-
         <label className="block mb-2 text-sm text-text-secondary">
           Enter OTP:
         </label>
@@ -39,12 +38,7 @@ export default function OtpForm({
           className="w-full rounded-xl border border-border-primary bg-bg-primary px-4 py-3 text-text-primary outline-none transition-all duration-300 focus:border-highlight-primary"
         />
 
-        {otpError && (
-          <p className="mt-2 text-sm text-danger">
-            {otpError}
-          </p>
-        )}
-
+        {otpError && <p className="mt-2 text-sm text-danger">{otpError}</p>}
       </div>
 
       <button
@@ -56,28 +50,25 @@ export default function OtpForm({
       </button>
 
       <div className="mt-4 text-center">
-
         {resendCooldown > 0 ? (
-
           <p className="text-xs md:text-sm text-text-secondary">
             Resend OTP in {resendCooldown}s
           </p>
-
         ) : (
-
           <button
             type="button"
             onClick={onResend}
             disabled={resendDisabled}
-            className="text-xs md:text-sm text-highlight-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all duration-300 ease-out"
+            className="cursor-pointer text-xs text-highlight-primary transition-all duration-300 ease-out hover:underline disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           >
-            Resend OTP
+            {otpResent
+              ? "New OTP Sent!"
+              : resendCooldown > 0
+                ? `Resend OTP in ${resendCooldown}s`
+                : "Resend OTP"}
           </button>
-
         )}
-
       </div>
-
     </>
   );
 }
