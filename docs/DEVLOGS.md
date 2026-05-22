@@ -709,7 +709,7 @@ Commit - 05a7ff7
 
 ## 22 May 2026 — OAuth Integration & Signup Flow Refactor
 
-Commit - <hash>
+Commit - 7e09080
 
 ### Completed
 
@@ -743,3 +743,26 @@ Commit - <hash>
 - Signup sessions can safely resume after refresh/navigation
 - Username validation UX is now smoother and less visually unstable
 - Frontend signup architecture now properly supports multiple auth entry flows
+
+# Commit 14 — Cleanup & Maintenance Infrastructure
+
+Commit - <hash>
+
+## Completed 
+
+- Added expired OTP cleanup system
+- Added expired refresh session cleanup
+- Added automatic pending signup cleanup
+- Added inactive guest account cleanup
+- Added guest deletion on expired session cleanup
+- Added orphan guest protection checks
+- Added scheduled maintenance job system
+- Added centralized maintenance services
+- Added UTC-based cleanup handling
+
+## Notes
+
+- Expired signup OTPs now automatically remove related pending signups
+- Guest accounts are deleted only when no active sessions remain
+- Cleanup jobs are isolated into dedicated maintenance services
+- Maintenance system is now ready for future Celery/Redis migration

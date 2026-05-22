@@ -1,11 +1,29 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from contextlib import asynccontextmanager
 
 from app.api.v1.api import api_router
-from app.core.database import settings
+from app.core.config import settings
 
-app = FastAPI(title="Aureon API", version="1.0.0")
+from app.services.maintenance.scheduler import (
+    start_scheduler,
+    stop_scheduler,
+)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    # Startup
+    start_scheduler()
+
+    yield
+
+    # Shutdown
+    stop_scheduler()
+    
+
+app = FastAPI(title="Aureon API", version="1.0.0", lifespan=lifespan)
 
 origins = [
     settings.FRONTEND_URL,
