@@ -70,19 +70,15 @@ def handle_password_reset_request(
         normalized_email,
     )
 
-    # ==========================================
-    # Silent success:
+        # Silent success:
     # Never reveal account existence
-    # ==========================================
-
+    
     if not user:
 
         return {}
 
-    # ==========================================
-    # Google-only accounts
-    # ==========================================
-
+        # Google-only accounts
+    
     local_provider = get_local_auth_provider(
         session,
         user.id,
@@ -177,10 +173,8 @@ def handle_password_reset_resend_otp(
         normalized_email,
     )
 
-    # ==========================================
-    # Silent success
-    # ==========================================
-
+        # Silent success
+    
     if not user:
 
         return {}
@@ -409,10 +403,8 @@ def handle_complete_password_reset(
 
     user.password_hash = password_hash
 
-    # ==========================================
-    # Kill all access tokens
-    # ==========================================
-
+        # Kill all access tokens
+    
     user.token_version += 1
 
     session.add(

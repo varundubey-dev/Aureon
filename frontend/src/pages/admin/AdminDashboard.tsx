@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
 export default function AdminDashboard() {
+  usePageTitle("Admin Dashboard")
   const navigate = useNavigate();
 
   const {

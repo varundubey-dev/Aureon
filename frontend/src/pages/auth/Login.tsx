@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
 import { UserRound, Lock } from "lucide-react";
 
@@ -21,6 +22,7 @@ import {
 } from "../../utils/auth_validators";
 
 export default function Login() {
+  usePageTitle("Login")
   const navigate = useNavigate();
 
   const { loginUser, user } = useAuth();

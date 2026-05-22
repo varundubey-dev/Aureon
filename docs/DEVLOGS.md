@@ -678,7 +678,7 @@ Commit - 554168c
 
 ## 22 May 2026 — Local Authentication & Guest Session System
 
-Commit - <hash>
+Commit - 05a7ff7
 
 ### Completed
 - 
@@ -706,3 +706,40 @@ Commit - <hash>
 - Guests can now access auth routes while authenticated users are redirected
 - Auth flow now supports session restore and automatic token refresh
 - Frontend auth architecture is now ready for OAuth integration
+
+## 22 May 2026 — OAuth Integration & Signup Flow Refactor
+
+Commit - <hash>
+
+### Completed
+
+- Integrated complete OAuth-first signup frontend flow
+- Added signup session restore using signup token validation
+- Added dynamic multi-flow signup step system
+- Added OAuth-first account local setup completion flow
+- Added guest upgrade signup flow
+- Added conditional role selection skipping
+- Added persistent signup session handling via sessionStorage
+- Added signup session validation endpoint integration
+- Added username success/error visual states
+- Improved username debounce + async availability UX
+- Improved OTP cooldown recovery UX
+- Added dynamic signup progress step rendering
+- Added reusable dynamic page title hook integration
+- Improved loading screen UI
+
+### Backend Improvements
+
+- Fixed insecure signup resume handling
+- Added proper signup session validation flow
+- Added OAuth-aware signup response types
+- Added safer pending signup verification checks
+- Improved OTP resend cooldown handling logic
+
+### Notes
+
+- OAuth-first users now complete local credentials setup without role selection
+- Guest upgrades now skip unnecessary role selection flow
+- Signup sessions can safely resume after refresh/navigation
+- Username validation UX is now smoother and less visually unstable
+- Frontend signup architecture now properly supports multiple auth entry flows

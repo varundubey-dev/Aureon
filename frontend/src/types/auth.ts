@@ -20,17 +20,22 @@ export interface AuthResponse {
 }
 
 export interface SignupRequestResponse {
-  type: "otp_verification" | "complete_local_setup" | "resume_signup";
-  message?: string;
-  signup_token?: string;
-  email?: string;
-  name?: string;
-  username_suggestions?: string[];
+  type: "otp_verification" | "complete_local_setup";
+  message: string;
 }
 
 export interface SignupOtpResponse {
   message: string;
+  type: "normal_signup" | "complete_local_setup";
   signup_token: string;
+  username_suggestions: string[];
+}
+
+export interface SignupSessionResponse {
+  message: string;
+  type: "normal_signup" | "complete_local_setup";
+  email: string;
+  name: string;
   username_suggestions: string[];
 }
 

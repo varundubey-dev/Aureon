@@ -90,6 +90,9 @@ from app.services.auth.password_service import (
 LOCAL_PROVIDER = AuthProviderType.LOCAL.value
 
 
+# Signup Request
+
+
 def handle_signup_request(
     session: Session,
     email: str,
@@ -119,10 +122,8 @@ def handle_signup_request(
         normalized_email,
     )
 
-    # ==========================================
-    # Existing Account
-    # ==========================================
-
+        # Existing Local Account
+    
     if existing_user:
 
         if not existing_user.email:
@@ -131,10 +132,6 @@ def handle_signup_request(
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 "Account email corrupted",
             )
-
-        # ==========================================
-        # Existing Local Account
-        # ==========================================
 
         if has_local_auth_provider(
             session,
@@ -146,21 +143,6 @@ def handle_signup_request(
                 "Account already exists",
             )
 
-        # ==========================================
-        # OAuth-only Account
-        # ==========================================
-
-        signup_token = create_signup_token(
-            existing_user.email,
-        )
-
-        return {
-            "type": "complete_local_setup",
-            "signup_token": signup_token,
-            "email": existing_user.email,
-            "name": existing_user.name,
-        }
-
     existing_pending_signup = get_pending_signup(
         session,
         normalized_email,
@@ -171,25 +153,8 @@ def handle_signup_request(
         normalized_email,
     )
 
-    if existing_pending_signup and existing_pending_signup.verified:
-
-        signup_token = create_signup_token(
-            normalized_email,
-        )
-
-        username_suggestions = generate_username_suggestions(
-            session,
-            existing_pending_signup.name,
-        )
-
-        return {
-            "type": "resume_signup",
-            "signup_token": signup_token,
-            "email": normalized_email,
-            "name": existing_pending_signup.name,
-            "username_suggestions": username_suggestions,
-        }
-
+        # OTP Cooldown
+    
     if existing_otp:
 
         if not is_otp_expired(
@@ -232,15 +197,24 @@ def handle_signup_request(
             expires_at=otp_expiration,
         )
 
+    linked_user_id = existing_user_id
+
+        # OAuth-first Account
+    
+    if existing_user and not has_local_auth_provider(
+        session,
+        existing_user.id,
+    ):
+
+        linked_user_id = existing_user.id
+
     if existing_pending_signup:
 
         pending_signup = existing_pending_signup
 
         pending_signup.name = trimmed_name
-        pending_signup.otp_hash = hashed_otp
-        pending_signup.otp_expires_at = otp_expiration
         pending_signup.verified = False
-        pending_signup.existing_user_id = existing_user_id
+        pending_signup.existing_user_id = linked_user_id
 
     else:
 
@@ -250,7 +224,7 @@ def handle_signup_request(
             otp_hash=hashed_otp,
             otp_expires_at=otp_expiration,
             verified=False,
-            existing_user_id=existing_user_id,
+            existing_user_id=linked_user_id,
         )
 
     session.add(
@@ -266,9 +240,17 @@ def handle_signup_request(
     )
 
     session.commit()
+    
+    signup_type = "otp_verification"
+
+    if existing_user and not has_local_auth_provider(
+        session,
+        existing_user.id,
+    ):
+        signup_type = "complete_local_setup"
 
     return {
-        "type": "otp_verification",
+        "type": signup_type,
         "message": "OTP sent successfully",
         "email_data": {
             "recipient": normalized_email,
@@ -276,6 +258,9 @@ def handle_signup_request(
             "body": email_body,
         },
     }
+
+
+# Verify Signup OTP
 
 
 def handle_verify_signup_otp(
@@ -309,7 +294,7 @@ def handle_verify_signup_otp(
 
         raise AuthError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            ("Pending signup state corrupted"),
+            "Pending signup state corrupted",
         )
 
     if pending_signup.verified:
@@ -341,7 +326,7 @@ def handle_verify_signup_otp(
 
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
-            ("Maximum OTP attempts exceeded"),
+            "Maximum OTP attempts exceeded",
         )
 
     if not verify_otp(
@@ -385,10 +370,95 @@ def handle_verify_signup_otp(
         pending_signup.name,
     )
 
+    existing_user = get_user_by_email(
+        session,
+        normalized_email,
+    )
+
+    signup_type = "normal_signup"
+
+        # OAuth-first Account
+    
+    if existing_user and not has_local_auth_provider(
+        session,
+        existing_user.id,
+    ):
+
+        signup_type = "complete_local_setup"
+
     return {
+        "type": signup_type,
         "signup_token": signup_token,
-        "username_suggestions": (username_suggestions),
+        "username_suggestions": username_suggestions,
     }
+
+
+# Validate Signup Session
+
+
+def validate_signup_session(
+    session: Session,
+    signup_token: str,
+):
+
+    signup_email = verify_signup_token(
+        signup_token,
+    )
+
+    if not signup_email:
+
+        raise AuthError(
+            status.HTTP_401_UNAUTHORIZED,
+            "Invalid or expired signup session",
+        )
+
+    pending_signup = get_pending_signup(
+        session,
+        signup_email,
+    )
+
+    if not pending_signup:
+
+        raise AuthError(
+            status.HTTP_404_NOT_FOUND,
+            "Pending signup not found",
+        )
+
+    if not pending_signup.verified:
+
+        raise AuthError(
+            status.HTTP_401_UNAUTHORIZED,
+            "Signup verification required",
+        )
+
+    existing_user = get_user_by_email(
+        session,
+        signup_email,
+    )
+
+    signup_type = "normal_signup"
+
+        # OAuth-first Account
+    
+    if existing_user and not has_local_auth_provider(
+        session,
+        existing_user.id,
+    ):
+
+        signup_type = "complete_local_setup"
+
+    return {
+        "type": signup_type,
+        "email": signup_email,
+        "name": pending_signup.name,
+        "username_suggestions": generate_username_suggestions(
+            session,
+            pending_signup.name,
+        ),
+    }
+
+
+# Resend Signup OTP
 
 
 def handle_resend_signup_otp(
@@ -421,14 +491,14 @@ def handle_resend_signup_otp(
 
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
-            ("Pending signup not found"),
+            "Pending signup not found",
         )
 
     if pending_signup.verified:
 
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
-            ("Signup already verified"),
+            "Signup already verified",
         )
 
     if otp_record.verified:
@@ -444,7 +514,7 @@ def handle_resend_signup_otp(
 
         raise AuthError(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            ("OTP resend cooldown active"),
+            "OTP resend cooldown active",
         )
 
     otp = generate_otp()
@@ -461,8 +531,6 @@ def handle_resend_signup_otp(
         otp_expiration,
     )
 
-    pending_signup.otp_hash = hashed_otp
-    pending_signup.otp_expires_at = otp_expiration
     pending_signup.verified = False
 
     session.add(
@@ -486,6 +554,9 @@ def handle_resend_signup_otp(
             "body": email_body,
         },
     }
+
+
+# Complete Signup
 
 
 def handle_complete_signup(
@@ -552,63 +623,6 @@ def handle_complete_signup(
         password,
     )
 
-    # ==========================================
-    # Existing OAuth-only Account
-    # ==========================================
-
-    existing_user = get_user_by_email(
-        session,
-        signup_email,
-    )
-
-    if existing_user:
-
-        if has_local_auth_provider(
-            session,
-            existing_user.id,
-        ):
-
-            raise AuthError(
-                status.HTTP_400_BAD_REQUEST,
-                "Local login already configured",
-            )
-
-        user = existing_user
-        user.username = username
-        user.username_normalized = normalized_username
-        user.password_hash = password_hash
-
-        session.add(
-            user,
-        )
-
-        create_auth_provider(
-            session,
-            user_id=user.id,
-            provider=LOCAL_PROVIDER,
-            provider_user_id=signup_email,
-        )
-
-        (
-            access_token,
-            refresh_token,
-        ) = create_user_auth_session(
-            session,
-            user,
-        )
-
-        session.commit()
-
-        return (
-            user,
-            access_token,
-            refresh_token,
-        )
-
-    # ==========================================
-    # Normal Signup Flow
-    # ==========================================
-
     pending_signup = get_pending_signup(
         session,
         signup_email,
@@ -628,26 +642,41 @@ def handle_complete_signup(
             "Signup verification required",
         )
 
-    if not validate_public_role(
-        role,
+    existing_user = get_user_by_email(
+        session,
+        signup_email,
+    )
+
+        # OAuth-first Account
+    
+    if existing_user and not has_local_auth_provider(
+        session,
+        existing_user.id,
     ):
 
-        raise AuthError(
-            status.HTTP_403_FORBIDDEN,
-            "Invalid public role",
+        user = existing_user
+
+        user.username = normalized_username
+        user.username_normalized = normalized_username
+        user.password_hash = password_hash
+
+        if not user.role:
+
+            user.role = UserRole.LISTENER.value
+
+        session.add(
+            user,
         )
 
-    # ==========================================
-    # Guest Upgrade
-    # ==========================================
-
-    if pending_signup.existing_user_id:
+        # Guest Upgrade
+    
+    elif pending_signup.existing_user_id:
 
         if role != UserRole.LISTENER.value:
 
             raise AuthError(
                 status.HTTP_403_FORBIDDEN,
-                ("Guest accounts can only " "upgrade to listener accounts"),
+                "Guest accounts can only upgrade to listener accounts",
             )
 
         user = session.get(
@@ -666,28 +695,35 @@ def handle_complete_signup(
             session,
             user,
             name=pending_signup.name,
-            username=username,
-            normalized_username=(normalized_username),
+            username=normalized_username,
+            normalized_username=normalized_username,
             email=pending_signup.email,
             password_hash=password_hash,
         )
 
-    # ==========================================
-    # Fresh Local Signup
-    # ==========================================
-
+        # Fresh Local Signup
+    
     else:
+
+        if not validate_public_role(
+            role,
+        ):
+
+            raise AuthError(
+                status.HTTP_403_FORBIDDEN,
+                "Invalid public role",
+            )
 
         user = User(
             name=pending_signup.name,
-            username=username,
-            username_normalized=(normalized_username),
+            username=normalized_username,
+            username_normalized=normalized_username,
             email=pending_signup.email,
             password_hash=password_hash,
             role=role,
             is_admin=False,
             is_guest=False,
-            profile_color=(generate_profile_color()),
+            profile_color=generate_profile_color(),
             last_login_at=datetime.now(
                 timezone.utc,
             ),

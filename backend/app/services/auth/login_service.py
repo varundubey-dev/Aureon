@@ -62,10 +62,8 @@ def handle_login(
         user.id,
     )
 
-    # ==========================================
-    # OAuth-only account
-    # ==========================================
-
+        # OAuth-only account
+    
     if not local_provider:
 
         raise AuthError(
@@ -199,10 +197,8 @@ def handle_refresh_token(
             "Refresh token expired",
         )
 
-    # ==========================================
-    # Sliding refresh session
-    # ==========================================
-
+        # Sliding refresh session
+    
     now = datetime.now(timezone.utc)
 
     remaining_time = (refresh_session.expires_at - now).days

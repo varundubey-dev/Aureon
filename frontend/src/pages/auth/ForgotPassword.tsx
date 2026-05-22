@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
 import { Mail } from "lucide-react";
 
@@ -25,6 +26,7 @@ import {
 } from "../../utils/auth_validators";
 
 export default function ForgotPassword() {
+  usePageTitle("Reset Password")
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);

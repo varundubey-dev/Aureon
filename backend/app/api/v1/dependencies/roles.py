@@ -27,10 +27,8 @@ def require_roles(
         ),
     ) -> User:
 
-        # ==========================================
-        # Admin bypass
-        # ==========================================
-
+                # Admin bypass
+        
         if (
             current_user.role
             == UserRole.ADMIN.value

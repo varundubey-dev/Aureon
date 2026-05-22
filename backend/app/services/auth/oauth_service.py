@@ -31,10 +31,11 @@ from app.services.auth.auth_tokens import (
 
 from app.services.auth.auth_utils import (
     generate_available_username,
-    generate_profile_color
+    generate_profile_color,
 )
 
 from app.services.auth.auth_validators import (
+    normalize_email,
     validate_public_role,
 )
 
@@ -47,6 +48,7 @@ from app.services.auth.password_service import (
 )
 
 GOOGLE_PROVIDER = AuthProviderType.GOOGLE.value
+
 
 def build_oauth_user(
     session: Session,
@@ -91,6 +93,7 @@ def handle_google_auth_callback(
     google_user_id: str | None,
     email: str | None,
     name: str | None,
+    email_verified: bool | None,
     current_user: User | None = None,
 ):
 
@@ -101,10 +104,19 @@ def handle_google_auth_callback(
             "Invalid Google user data",
         )
 
-    # ==========================================
-    # Existing Google OAuth Login
-    # ==========================================
+    if not email_verified:
 
+        raise AuthError(
+            400,
+            "Google email not verified",
+        )
+
+    email = normalize_email(
+        email,
+    )
+
+        # Existing Google OAuth Login
+    
     provider_user = get_user_by_provider(
         session,
         GOOGLE_PROVIDER,
@@ -128,11 +140,22 @@ def handle_google_auth_callback(
             "refresh_token": refresh_token,
         }
 
-    # ==========================================
-    # Guest Upgrade Flow
-    # ==========================================
-
+        # Guest Upgrade Flow
+    
     if current_user and current_user.is_guest:
+
+        existing_google_provider = get_user_by_provider(
+            session,
+            GOOGLE_PROVIDER,
+            google_user_id,
+        )
+
+        if existing_google_provider:
+
+            raise AuthError(
+                409,
+                "Google account already linked",
+            )
 
         (
             username,
@@ -149,7 +172,7 @@ def handle_google_auth_callback(
             username=username,
             normalized_username=normalized_username,
             email=email,
-            password_hash=(generate_unusable_password_hash()),
+            password_hash=generate_unusable_password_hash(),
         )
 
         create_auth_provider(
@@ -174,16 +197,27 @@ def handle_google_auth_callback(
             "refresh_token": refresh_token,
         }
 
-    # ==========================================
-    # Existing User Account Linking
-    # ==========================================
-
+        # Existing User Account Linking
+    
     existing_user = get_user_by_email(
         session,
         email,
     )
 
     if existing_user:
+
+        existing_google_provider = get_user_by_provider(
+            session,
+            GOOGLE_PROVIDER,
+            google_user_id,
+        )
+
+        if existing_google_provider:
+
+            raise AuthError(
+                409,
+                "Google account already linked",
+            )
 
         create_auth_provider(
             session,
@@ -207,10 +241,8 @@ def handle_google_auth_callback(
             "refresh_token": refresh_token,
         }
 
-    # ==========================================
-    # New OAuth Signup
-    # ==========================================
-
+        # New OAuth Signup
+    
     oauth_signup_token = create_oauth_signup_token(
         {
             "sub": email,
@@ -221,7 +253,7 @@ def handle_google_auth_callback(
 
     return {
         "type": "onboarding",
-        "oauth_signup_token": (oauth_signup_token),
+        "oauth_signup_token": oauth_signup_token,
         "email": email,
         "name": name,
     }
@@ -242,7 +274,7 @@ def handle_complete_oauth_signup(
 
         raise AuthError(
             401,
-            ("Invalid or expired OAuth signup token"),
+            "Invalid or expired OAuth signup token",
         )
 
     if not validate_public_role(
@@ -270,8 +302,12 @@ def handle_complete_oauth_signup(
 
         raise AuthError(
             400,
-            ("Invalid OAuth signup payload"),
+            "Invalid OAuth signup payload",
         )
+
+    email = normalize_email(
+        email,
+    )
 
     existing_user = get_user_by_email(
         session,

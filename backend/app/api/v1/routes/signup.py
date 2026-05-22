@@ -55,6 +55,7 @@ from app.services.auth.signup_service import (
     handle_resend_signup_otp,
     handle_signup_request,
     handle_verify_signup_otp,
+    validate_signup_session,
 )
 
 router = APIRouter(
@@ -100,10 +101,6 @@ def signup_request(
     except AuthError as exc:
 
         raise_auth_error(exc)
-
-    # ==========================================
-    # Background Email Sending
-    # ==========================================
 
     email_data = result.pop(
         "email_data",
@@ -151,6 +148,28 @@ def verify_signup_otp(
     }
 
 
+@router.get("/signup/session/{signup_token}")
+def validate_signup(
+    signup_token: str,
+    session: Session = Depends(get_session),
+):
+
+    try:
+
+        result = validate_signup_session(
+            session=session,
+            signup_token=signup_token,
+        )
+
+    except AuthError as exc:
+
+        raise_auth_error(exc)
+
+    return {
+        "message": "Signup session valid",
+        **result,
+    }
+
 @router.post("/signup/resend")
 def resend_signup_otp(
     request: ResendSignupOTPRequest,
@@ -168,10 +187,6 @@ def resend_signup_otp(
     except AuthError as exc:
 
         raise_auth_error(exc)
-
-    # ==========================================
-    # Background Email Sending
-    # ==========================================
 
     email_data = result.get(
         "email_data",
@@ -192,7 +207,6 @@ def resend_signup_otp(
     return {
         "message": "OTP resent successfully",
     }
-
 
 @router.post("/signup/complete")
 def complete_signup(
@@ -230,7 +244,6 @@ def complete_signup(
         access_token,
         "Signup completed successfully",
     )
-
 
 @router.post("/username/check")
 def check_username_availability(

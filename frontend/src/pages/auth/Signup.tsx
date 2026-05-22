@@ -1,75 +1,105 @@
 import { useEffect, useState } from "react";
-
 import { useNavigate } from "react-router-dom";
+import { Mail, UserRound } from "lucide-react";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
-import { UserRound, Mail } from "lucide-react";
-
+import AuthHeader from "../../components/auth/AuthHeader";
 import AuthInput from "../../components/auth/AuthInput";
 import AuthLayout from "../../components/auth/AuthLayout";
-import AuthHeader from "../../components/auth/AuthHeader";
 import OtpForm from "../../components/auth/OtpForm";
 import PasswordForm from "../../components/auth/PasswordForm";
-import SocialAuth from "../../components/auth/SocialAuth";
 import RoleSelection from "../../components/auth/RoleSelection";
-
-import {
-  signupRequest,
-  verifySignupOtp,
-  resendSignupOtp,
-  completeSignup,
-  checkUsernameAvailability,
-  createGuestSession,
-} from "../../services/auth_service";
+import SocialAuth from "../../components/auth/SocialAuth";
 
 import { useAuth } from "../../context/AuthContext";
-import { getUserRedirectPath } from "../../utils/auth_redirects";
-
 import {
-  validateName,
-  validateEmail,
-  validateOtp,
-  validateUsername,
-  validatePassword,
+  checkUsernameAvailability,
+  completeSignup,
+  createGuestSession,
+  resendSignupOtp,
+  signupRequest,
+  validateSignupSession,
+  verifySignupOtp,
+} from "../../services/auth_service";
+import { getUserRedirectPath } from "../../utils/auth_redirects";
+import {
   validateConfirmPassword,
+  validateEmail,
+  validateName,
+  validateOtp,
+  validatePassword,
+  validateUsername,
 } from "../../utils/auth_validators";
 
 export default function Signup() {
+  usePageTitle("Signup");
   const navigate = useNavigate();
   const { loginUser, user } = useAuth();
   const [signupStep, setSignupStep] = useState(1);
   const [cooldown, setCooldown] = useState(0);
-  const [signupToken, setSignupToken] = useState("");
   const [otpResent, setOtpResent] = useState(false);
-
+  const [signupToken, setSignupToken] = useState("");
+  const [isOAuthFlow, setIsOAuthFlow] = useState(false);
   const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
-
   const [isLoading, setIsLoading] = useState(false);
-
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<
+    boolean | null
+  >(null);
 
   const [credentials, setCredentials] = useState({
     name: "",
-    username: "",
     email: "",
     otp: "",
+    username: "",
     password: "",
     confirmPassword: "",
     role: "",
   });
 
   const [nameError, setNameError] = useState("");
-
-  const [usernameError, setUsernameError] = useState("");
-
   const [emailError, setEmailError] = useState("");
-
   const [otpError, setOtpError] = useState("");
-
+  const [usernameError, setUsernameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
-
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-
   const [roleError, setRoleError] = useState("");
+
+  const isGuestUpgrade = !!user?.is_guest;
+  const skipRoleSelection = isOAuthFlow || isGuestUpgrade;
+  const totalSteps = skipRoleSelection ? 3 : 4;
+  const currentVisibleStep =
+    skipRoleSelection && signupStep === 4 ? 3 : signupStep;
+
+  // Restore Resume Session
+  useEffect(() => {
+    const storedToken = sessionStorage.getItem("signup_token");
+
+    if (!storedToken) {
+      return;
+    }
+
+    async function restoreSession() {
+      try {
+        const response = await validateSignupSession(storedToken!);
+
+        setSignupToken(storedToken!);
+        setIsOAuthFlow(response.type === "complete_local_setup");
+        setUsernameSuggestions(response.username_suggestions);
+        setCredentials((prev) => ({
+          ...prev,
+          email: response.email,
+          name: response.name,
+        }));
+
+        setSignupStep(3);
+      } catch {
+        sessionStorage.removeItem("signup_token");
+      }
+    }
+
+    restoreSession();
+  }, []);
 
   // Cooldown Timer
   useEffect(() => {
@@ -161,29 +191,34 @@ export default function Signup() {
     return () => clearTimeout(timeout);
   }, [credentials.password, credentials.confirmPassword, signupStep]);
 
-  // Username Availability Check
+  // Username Availability
   useEffect(() => {
     if (signupStep !== 3) {
       return;
     }
 
-    const username = credentials.username.trim();
-
-    if (!username) {
-      setUsernameError("");
-
-      return;
-    }
-
-    const validationError = validateUsername(username);
-
-    if (validationError) {
-      setUsernameError(validationError);
-
-      return;
-    }
-
     const timeout = setTimeout(async () => {
+      const username = credentials.username.trim();
+
+      // reset state while typing
+      setIsUsernameAvailable(null);
+
+      if (!username) {
+        setUsernameError("");
+
+        return;
+      }
+
+      // local validation
+      const validationError = validateUsername(username);
+
+      if (validationError) {
+        setUsernameError(validationError);
+        setIsUsernameAvailable(false);
+
+        return;
+      }
+
       try {
         setIsCheckingUsername(true);
 
@@ -191,17 +226,21 @@ export default function Signup() {
 
         if (!response.available) {
           setUsernameError("Username already taken");
+          setIsUsernameAvailable(false);
 
           return;
         }
 
         setUsernameError("");
+        setIsUsernameAvailable(true);
       } catch {
         setUsernameError("Failed to check username");
+
+        setIsUsernameAvailable(false);
       } finally {
         setIsCheckingUsername(false);
       }
-    }, 500);
+    }, 700);
 
     return () => clearTimeout(timeout);
   }, [credentials.username, signupStep]);
@@ -216,14 +255,12 @@ export default function Signup() {
     }));
   }
 
-  // Step 1 — Request Signup
+  // Step 1
   async function handleContinue() {
     const nameValidation = validateName(credentials.name);
-
     const emailValidation = validateEmail(credentials.email);
 
     setNameError(nameValidation);
-
     setEmailError(emailValidation);
 
     if (nameValidation || emailValidation) {
@@ -235,25 +272,19 @@ export default function Signup() {
 
       const response = await signupRequest(credentials.name, credentials.email);
 
-      // Existing OAuth User OR Resume Signup
-      if (
-        response.type === "complete_local_setup" ||
-        response.type === "resume_signup"
-      ) {
-        setSignupToken(response.signup_token || "");
-
-        setUsernameSuggestions(response.username_suggestions || []);
-
-        setSignupStep(3);
-
-        return;
-      }
-
+      setIsOAuthFlow(response.type === "complete_local_setup");
       setCooldown(30);
 
       setSignupStep(2);
     } catch (error: any) {
       const message = error?.response?.data?.detail || "Signup failed";
+
+      if (message.includes("OTP resend cooldown active")) {
+        setCooldown(25);
+        setSignupStep(2);
+
+        return;
+      }
 
       setEmailError(message);
     } finally {
@@ -261,7 +292,7 @@ export default function Signup() {
     }
   }
 
-  // Step 2 — Verify OTP
+  // Step 2
   async function handleVerifyOTP() {
     const otpValidation = validateOtp(credentials.otp);
 
@@ -280,9 +311,9 @@ export default function Signup() {
       );
 
       setSignupToken(response.signup_token);
-
+      sessionStorage.setItem("signup_token", response.signup_token);
       setUsernameSuggestions(response.username_suggestions);
-
+      setIsOAuthFlow(response.type === "complete_local_setup");
       setSignupStep(3);
     } catch (error: any) {
       const message =
@@ -315,50 +346,38 @@ export default function Signup() {
     }, 3000);
   }
 
-  // Step 3 — Credentials Validation
-  function handleCredentialsContinue() {
+  // Step 3
+  async function handleCredentialsContinue() {
     const usernameValidation = validateUsername(credentials.username);
-
     const passwordValidation = validatePassword(credentials.password);
 
-    const confirmPasswordValidation = validateConfirmPassword(
+    const confirmValidation = validateConfirmPassword(
       credentials.password,
       credentials.confirmPassword,
     );
 
     setUsernameError(usernameValidation);
-
     setPasswordError(passwordValidation);
+    setConfirmPasswordError(confirmValidation);
 
-    setConfirmPasswordError(confirmPasswordValidation);
-
-    if (usernameValidation || passwordValidation || confirmPasswordValidation) {
+    if (usernameValidation || passwordValidation || confirmValidation) {
       return;
     }
 
-    if (isCheckingUsername) {
+    if (isCheckingUsername || usernameError) {
       return;
     }
 
-    if (usernameError) {
+    if (skipRoleSelection) {
+      await handleCompleteSignup("listener");
+
       return;
     }
-
     setSignupStep(4);
   }
 
-  // Step 4 — Complete Signup
-  async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
-    setRoleError("");
-
-    if (!credentials.role) {
-      setRoleError("Please select a role");
-
-      return;
-    }
-
+  // Complete Signup
+  async function handleCompleteSignup(role: string) {
     try {
       setIsLoading(true);
 
@@ -367,11 +386,11 @@ export default function Signup() {
         credentials.username,
         credentials.password,
         credentials.confirmPassword,
-        credentials.role,
+        role,
       );
 
+      sessionStorage.removeItem("signup_token");
       loginUser(response);
-
       navigate(getUserRedirectPath(response.user), {
         replace: true,
       });
@@ -380,7 +399,6 @@ export default function Signup() {
 
       if (message.includes("Username")) {
         setUsernameError(message);
-
         setSignupStep(3);
 
         return;
@@ -388,8 +406,17 @@ export default function Signup() {
 
       if (message.includes("Password")) {
         setPasswordError(message);
-
         setSignupStep(3);
+
+        return;
+      }
+
+      if (message.includes("Invalid or expired signup")) {
+        sessionStorage.removeItem("signup_token");
+
+        navigate("/auth/signup", {
+          replace: true,
+        });
 
         return;
       }
@@ -398,6 +425,20 @@ export default function Signup() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  // Step 4 Submit
+  async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setRoleError("");
+
+    if (!credentials.role) {
+      setRoleError("Please select a role");
+
+      return;
+    }
+
+    await handleCompleteSignup(credentials.role);
   }
 
   // Guest Login
@@ -427,15 +468,12 @@ export default function Signup() {
     }
   }
 
-  const currentVisibleStep =
-    signupStep === 1 ? 1 : signupStep === 2 ? 2 : signupStep === 3 ? 3 : 4;
-
   return (
     <AuthLayout>
       <form
         noValidate
         onSubmit={handleSignup}
-        className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-secondary p-5 shadow-xl sm:p-6 md:p-8"
+        className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-secondary p-5 shadow-xl sm:p-6 md:px-8 md:py-5"
       >
         <AuthHeader
           title="Create Account"
@@ -445,7 +483,9 @@ export default function Signup() {
         {/* Progress Steps */}
         {signupStep > 1 && (
           <div className="mb-7 flex items-center justify-center">
-            {[1, 2, 3, 4].map((step, index) => {
+            {[...Array(totalSteps)].map((_, index) => {
+              const step = index + 1;
+
               const isCompleted = step < currentVisibleStep;
 
               const isActive = step === currentVisibleStep;
@@ -454,29 +494,29 @@ export default function Signup() {
                 <div key={step} className="flex items-center">
                   <div
                     className={`
-                      flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-300 ease-out sm:h-10 sm:w-10
-                      ${
-                        isCompleted
-                          ? "border-accent-primary bg-accent-primary text-accent-text"
-                          : isActive
-                            ? "border-accent-primary text-accent-primary"
-                            : "border-border-primary text-text-secondary"
-                      }
-                    `}
+                        flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all duration-300 ease-out sm:h-10 sm:w-10
+                        ${
+                          isCompleted
+                            ? "border-accent-primary bg-accent-primary text-accent-text"
+                            : isActive
+                              ? "border-accent-primary text-accent-primary"
+                              : "border-border-primary text-text-secondary"
+                        }
+                      `}
                   >
                     {step}
                   </div>
 
-                  {index !== 3 && (
+                  {index !== totalSteps - 1 && (
                     <div
                       className={`
-                        h-0.5 w-8 transition-all duration-300 ease-out sm:w-12 md:w-14
-                        ${
-                          step < currentVisibleStep
-                            ? "bg-accent-primary"
-                            : "bg-border-primary"
-                        }
-                      `}
+                          h-0.5 w-8 transition-all duration-300 ease-out sm:w-12 md:w-14
+                          ${
+                            step < currentVisibleStep
+                              ? "bg-accent-primary"
+                              : "bg-border-primary"
+                          }
+                        `}
                     />
                   )}
                 </div>
@@ -521,7 +561,6 @@ export default function Signup() {
 
             <SocialAuth />
 
-            {/* Guest */}
             <div className="mt-5 flex items-center gap-3">
               <div className="h-px flex-1 bg-border-primary" />
 
@@ -573,37 +612,46 @@ export default function Signup() {
               placeholder="Choose a username"
               icon={UserRound}
               error={usernameError}
+              success={isUsernameAvailable === true}
               value={credentials.username}
               name="username"
               onChange={handleChange}
             />
 
             {/* Username Suggestions */}
-            {usernameSuggestions.length > 0 && !credentials.username && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {usernameSuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() =>
-                      setCredentials((prev) => ({
-                        ...prev,
-                        username: suggestion,
-                      }))
-                    }
-                    className="rounded-lg border border-border-primary px-3 py-1 text-xs text-text-secondary transition-all duration-300 ease-out hover:border-accent-primary hover:text-accent-primary"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="mb-2 min-h-1">
+              {!credentials.username && usernameSuggestions.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {usernameSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() =>
+                        setCredentials((prev) => ({
+                          ...prev,
+                          username: suggestion,
+                        }))
+                      }
+                      className="rounded-lg border border-border-primary px-3 py-1 text-xs text-text-secondary transition-all duration-300 ease-out hover:border-accent-primary hover:text-accent-primary"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            {isCheckingUsername && (
-              <p className="mb-4 text-xs text-text-secondary">
+            {/* Username Status */}
+            <div className="mb-2 min-h-1">
+              <p
+                className={`
+                    text-xs text-text-secondary transition-opacity duration-200
+                    ${isCheckingUsername ? "opacity-100" : "opacity-0"}
+                  `}
+              >
                 Checking username...
               </p>
-            )}
+            </div>
 
             <PasswordForm
               password={credentials.password}
@@ -619,7 +667,11 @@ export default function Signup() {
               onClick={handleCredentialsContinue}
               className="mt-2 w-full cursor-pointer rounded-xl bg-accent-primary py-2.5 text-sm font-semibold text-accent-text transition-all duration-300 ease-out hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 md:py-3 md:text-base"
             >
-              Continue
+              {isLoading
+                ? "Creating Account..."
+                : skipRoleSelection
+                  ? "Complete Setup"
+                  : "Continue"}
             </button>
           </>
         )}

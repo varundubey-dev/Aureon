@@ -6,6 +6,8 @@ import RoleProtectedRoute from "./routes/RoleProtectedRoute";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import OAuthSuccess from "./pages/auth/OAuthSuccess";
+import OAuthOnboarding from "./pages/auth/OAuthOnboarding";
 
 import Home from "./pages/listener/Home";
 import ArtistDashboard from "./pages/artist/ArtistDashboard";
@@ -15,8 +17,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 export default function App() {
   return (
     <Routes>
-
-      <Route path="/auth/login"
+      <Route
+        path="/auth/login"
         element={
           <AuthRoute>
             <Login />
@@ -24,7 +26,8 @@ export default function App() {
         }
       />
 
-      <Route path="/auth/signup"
+      <Route
+        path="/auth/signup"
         element={
           <AuthRoute>
             <Signup />
@@ -32,7 +35,8 @@ export default function App() {
         }
       />
 
-      <Route path="/auth/forgot-password"
+      <Route
+        path="/auth/forgot-password"
         element={
           <AuthRoute>
             <ForgotPassword />
@@ -40,7 +44,26 @@ export default function App() {
         }
       />
 
-      <Route path="/home"
+      <Route
+        path="/oauth/success"
+        element={
+          <AuthRoute>
+            <OAuthSuccess />
+          </AuthRoute>
+        }
+      />
+
+      <Route
+        path="/oauth/onboarding"
+        element={
+          <AuthRoute>
+            <OAuthOnboarding />
+          </AuthRoute>
+        }
+      />
+
+      <Route
+        path="/home"
         element={
           <RoleProtectedRoute allowedRoles={["listener"]}>
             <Home />
@@ -48,7 +71,8 @@ export default function App() {
         }
       />
 
-      <Route path="/artist/dashboard"
+      <Route
+        path="/artist/dashboard"
         element={
           <RoleProtectedRoute allowedRoles={["artist"]}>
             <ArtistDashboard />
@@ -56,7 +80,8 @@ export default function App() {
         }
       />
 
-      <Route path="/guest"
+      <Route
+        path="/guest"
         element={
           <RoleProtectedRoute allowGuest>
             <GuestHome />
@@ -64,7 +89,8 @@ export default function App() {
         }
       />
 
-      <Route path="/admin"
+      <Route
+        path="/admin"
         element={
           <RoleProtectedRoute adminOnly>
             <AdminDashboard />

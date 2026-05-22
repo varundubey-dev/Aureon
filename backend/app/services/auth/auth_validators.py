@@ -1,11 +1,33 @@
+import re
+from fastapi import status
+from app.core.exceptions.auth import AuthError
 from app.core.enums import UserRole
 
+EMAIL_REGEX = re.compile(
+    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+)
 
 def normalize_email(
     email: str,
 ) -> str:
 
-    return email.strip().lower()
+    normalized = email.strip().lower()
+
+    if len(normalized) > 254:
+
+        raise AuthError(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid email format",
+        )
+
+    if not EMAIL_REGEX.fullmatch(normalized):
+
+        raise AuthError(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid email format",
+        )
+
+    return normalized
 
 
 def normalize_username(

@@ -10,6 +10,7 @@ type AuthInputProps = {
   placeholder: string;
   icon: LucideIcon;
   error?: string;
+  success?: boolean;
   value: string;
   name: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -22,6 +23,7 @@ export default function AuthInput({
   placeholder,
   icon: Icon,
   error,
+  success,
   value,
   name,
   onChange,
@@ -54,6 +56,8 @@ export default function AuthInput({
           } ${
             error
               ? "border-danger focus:border-danger"
+              : success
+                  ? "border-success focus:border-success"
               : "border-border-primary focus:border-highlight-primary"
           }`}
         />

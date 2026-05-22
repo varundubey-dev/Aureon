@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
-
+import { usePageTitle } from "../../hooks/usePageTitle";
 import { useAuth } from "../../context/AuthContext";
 
 export default function ArtistDashboard() {
+  usePageTitle("Artist Dashboard")
   const navigate = useNavigate();
 
   const { user, logoutUser } = useAuth();

@@ -5,11 +5,12 @@ from fastapi import (
     Request,
     Response,
 )
+from fastapi.responses import RedirectResponse
 
 from sqlmodel import Session
 
 from app.api.v1.dependencies.auth import (
-    get_optional_current_user,
+    get_optional_session_user,
 )
 
 from app.core.config import settings
@@ -64,9 +65,12 @@ def raise_auth_error(
 async def google_login(
     request: Request,
     current_user: User | None = Depends(
-        get_optional_current_user,
+        get_optional_session_user,
     ),
 ):
+
+    print(current_user)
+    print(request.cookies)
 
     if current_user and current_user.is_guest:
 
@@ -83,7 +87,6 @@ async def google_login(
 @router.get("/google/callback")
 async def google_callback(
     request: Request,
-    response: Response,
     session: Session = Depends(get_session),
 ):
 
@@ -113,6 +116,13 @@ async def google_callback(
         "userinfo",
     )
 
+    if not user_info:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to fetch Google user info",
+        )
+
     try:
 
         result = handle_google_auth_callback(
@@ -120,6 +130,7 @@ async def google_callback(
             google_user_id=user_info.get("sub"),
             email=user_info.get("email"),
             name=user_info.get("name"),
+            email_verified=user_info.get("email_verified"),
             current_user=guest_user,
         )
 
@@ -129,33 +140,32 @@ async def google_callback(
             exc,
         )
 
-    # ==========================================
-    # Existing Login
-    # ==========================================
-
+        # Existing Login
+    
     if result["type"] == "login":
 
+        redirect_response = RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/oauth/success",
+            status_code=302,
+        )
+
         set_refresh_cookie(
-            response,
+            redirect_response,
             result["refresh_token"],
         )
 
-        return build_auth_response(
-            result["user"],
-            result["access_token"],
-            "Google authentication successful",
-        )
+        return redirect_response
 
-    # ==========================================
-    # New OAuth Signup
-    # ==========================================
-
-    return {
-        "message": "OAuth onboarding required",
-        "oauth_signup_token": result["oauth_signup_token"],
-        "email": result["email"],
-        "name": result["name"],
-    }
+        # New OAuth Signup
+    
+    return RedirectResponse(
+        url=(
+            f"{settings.FRONTEND_URL}"
+            f"/oauth/onboarding"
+            f"?token={result['oauth_signup_token']}"
+        ),
+        status_code=302,
+    )
 
 
 @router.post("/google/complete")
@@ -179,8 +189,9 @@ def complete_google_signup(
 
     except AuthError as exc:
 
-        raise_auth_error(
-            exc,
+        return RedirectResponse(
+            url=(f"{settings.FRONTEND_URL}" f"/oauth/error" f"?message={exc.detail}"),
+            status_code=302,
         )
 
     set_refresh_cookie(
