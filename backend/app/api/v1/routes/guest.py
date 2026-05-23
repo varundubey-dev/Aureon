@@ -2,11 +2,22 @@ from fastapi import (
     APIRouter,
     Depends,
     Response,
+    Request,
 )
 
 from sqlmodel import Session
 
-from app.core.database import get_session
+from app.core.database import (
+    get_session,
+)
+
+from app.core.security import (
+    set_refresh_cookie,
+)
+
+from app.core.rate_limit import (
+    limiter,
+)
 
 from app.services.auth.auth_utils import (
     generate_profile_color,
@@ -19,7 +30,6 @@ from app.services.auth.auth_tokens import (
 from app.services.auth.auth_sessions import (
     build_auth_response,
     create_refresh_session,
-    set_refresh_cookie,
 )
 
 from app.services.auth.guest_service import (
@@ -33,7 +43,9 @@ router = APIRouter(
 
 
 @router.post("/guest")
+@limiter.limit("3/hour")
 def create_guest_account(
+    request: Request,
     response: Response,
     session: Session = Depends(get_session),
 ):

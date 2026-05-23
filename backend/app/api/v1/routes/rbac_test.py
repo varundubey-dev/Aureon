@@ -1,7 +1,6 @@
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
 )
 
 from app.api.v1.dependencies.roles import (
@@ -10,10 +9,6 @@ from app.api.v1.dependencies.roles import (
 
 from app.core.enums import (
     UserRole,
-)
-
-from app.core.exceptions.auth import (
-    AuthError,
 )
 
 from app.models.auth.user import (
@@ -26,16 +21,6 @@ router = APIRouter(
 )
 
 
-def raise_auth_error(
-    exc: AuthError,
-):
-
-    raise HTTPException(
-        status_code=exc.status_code,
-        detail=exc.detail,
-    )
-
-
 @router.get("/listener")
 def listener_route(
     current_user: User = Depends(
@@ -46,9 +31,7 @@ def listener_route(
 ):
 
     return {
-        "message": (
-            "Listener route accessed"
-        ),
+        "message": "Listener route accessed",
         "user_id": str(current_user.id),
         "role": current_user.role,
     }
@@ -64,9 +47,7 @@ def artist_route(
 ):
 
     return {
-        "message": (
-            "Artist route accessed"
-        ),
+        "message": "Artist route accessed",
         "user_id": str(current_user.id),
         "role": current_user.role,
     }
@@ -82,9 +63,7 @@ def admin_route(
 ):
 
     return {
-        "message": (
-            "Admin route accessed"
-        ),
+        "message": "Admin route accessed",
         "user_id": str(current_user.id),
         "role": current_user.role,
     }

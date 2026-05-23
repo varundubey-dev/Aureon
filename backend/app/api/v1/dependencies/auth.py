@@ -1,8 +1,6 @@
 from fastapi import (
     Depends,
-    HTTPException,
     Request,
-    status,
 )
 
 from fastapi.security import (
@@ -13,6 +11,10 @@ from sqlmodel import Session
 
 from app.core.database import (
     get_session,
+)
+
+from app.core.exceptions.auth import (
+    AuthError,
 )
 
 from app.models.auth.user import (
@@ -75,9 +77,10 @@ def get_current_user(
 
     if not token:
 
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+        raise AuthError(
+            status_code=401,
             detail="Authentication required",
+            code="AUTH_REQUIRED",
         )
 
     user = validate_access_token_user(
@@ -87,9 +90,10 @@ def get_current_user(
 
     if not user:
 
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+        raise AuthError(
+            status_code=401,
             detail="Invalid access token",
+            code="INVALID_ACCESS_TOKEN",
         )
 
     return user
@@ -139,7 +143,7 @@ def get_optional_session_user(
         if user:
             return user
 
-        # Fallback to refresh cookie
+    # Fallback to refresh cookie
 
     refresh_token = request.cookies.get(
         "refresh_token",

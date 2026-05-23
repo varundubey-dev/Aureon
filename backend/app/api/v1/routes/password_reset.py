@@ -1,9 +1,9 @@
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Response,
     BackgroundTasks,
+    Request,
 )
 
 from sqlmodel import Session
@@ -12,18 +12,18 @@ from app.core.database import (
     get_session,
 )
 
-from app.services.auth.email_service import (
-    send_email,
-)
-
-from app.core.exceptions.auth import (
-    AuthError,
+from app.core.rate_limit import (
+    limiter,
 )
 
 from app.schemas.auth.password_reset import (
     CompletePasswordResetRequest,
     PasswordResetRequest,
     VerifyPasswordResetOTPRequest,
+)
+
+from app.services.auth.email_service import (
+    send_email,
 )
 
 from app.services.auth.auth_sessions import (
@@ -43,33 +43,19 @@ router = APIRouter(
 )
 
 
-def raise_auth_error(
-    exc: AuthError,
-):
-
-    raise HTTPException(
-        status_code=exc.status_code,
-        detail=exc.detail,
-    )
-
-
 @router.post("/password-reset/request")
+@limiter.limit("5/minute")
 def request_password_reset(
-    request: PasswordResetRequest,
+    request: Request,
+    request_data: PasswordResetRequest,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        result = handle_password_reset_request(
-            session=session,
-            email=request.email,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    result = handle_password_reset_request(
+        session=session,
+        email=request_data.email,
+    )
 
     email_data = result.get(
         "email_data",
@@ -94,22 +80,18 @@ def request_password_reset(
 
 
 @router.post("/password-reset/resend")
+@limiter.limit("3/minute")
 def resend_password_reset_otp(
-    request: PasswordResetRequest,
+    request: Request,
+    request_data: PasswordResetRequest,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        result = handle_password_reset_resend_otp(
-            session=session,
-            email=request.email,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    result = handle_password_reset_resend_otp(
+        session=session,
+        email=request_data.email,
+    )
 
     email_data = result.get(
         "email_data",
@@ -133,22 +115,18 @@ def resend_password_reset_otp(
 
 
 @router.post("/password-reset/verify")
+@limiter.limit("10/minute")
 def verify_password_reset_otp(
-    request: VerifyPasswordResetOTPRequest,
+    request: Request,
+    request_data: VerifyPasswordResetOTPRequest,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        result = handle_verify_password_reset_otp(
-            session=session,
-            email=request.email,
-            otp=request.otp,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    result = handle_verify_password_reset_otp(
+        session=session,
+        email=request_data.email,
+        otp=request_data.otp,
+    )
 
     return {
         "type": "otp_verified",
@@ -158,24 +136,20 @@ def verify_password_reset_otp(
 
 
 @router.post("/password-reset/complete")
+@limiter.limit("5/minute")
 def complete_password_reset(
-    request: CompletePasswordResetRequest,
+    request: Request,
+    request_data: CompletePasswordResetRequest,
     response: Response,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        handle_complete_password_reset(
-            session=session,
-            reset_token=request.reset_token,
-            new_password=request.new_password,
-            confirm_password=request.confirm_password,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    handle_complete_password_reset(
+        session=session,
+        reset_token=request_data.reset_token,
+        new_password=request_data.new_password,
+        confirm_password=request_data.confirm_password,
+    )
 
     clear_refresh_cookie(
         response,

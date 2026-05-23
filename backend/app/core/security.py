@@ -1,4 +1,5 @@
 from fastapi import Response
+from app.core.config import settings
 
 REFRESH_COOKIE_NAME = "refresh_token"
 
@@ -6,23 +7,30 @@ REFRESH_COOKIE_NAME = "refresh_token"
 def set_refresh_cookie(
     response: Response,
     refresh_token: str,
-) -> None:
+):
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
-        secure=False,  # True in prod
+        # TODO:
+        # Enable secure=True in production
+        # after HTTPS deployment.
+        secure=settings.COOKIE_SECURE,
         samesite="lax",
-        max_age=60 * 60 * 24 * 7,
         path="/",
+        max_age=(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60),
     )
 
 
 def clear_refresh_cookie(
     response: Response,
-) -> None:
+):
+
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="lax",
         path="/",
     )
 

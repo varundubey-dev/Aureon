@@ -1,11 +1,17 @@
 import re
-from fastapi import status
-from app.core.exceptions.auth import AuthError
-from app.core.enums import UserRole
 
-EMAIL_REGEX = re.compile(
-    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+from fastapi import status
+
+from app.core.enums import (
+    UserRole,
 )
+
+from app.core.exceptions.auth import (
+    AuthError,
+)
+
+EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+
 
 def normalize_email(
     email: str,
@@ -18,6 +24,7 @@ def normalize_email(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Invalid email format",
+            "INVALID_EMAIL_FORMAT",
         )
 
     if not EMAIL_REGEX.fullmatch(normalized):
@@ -25,6 +32,7 @@ def normalize_email(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Invalid email format",
+            "INVALID_EMAIL_FORMAT",
         )
 
     return normalized
@@ -48,6 +56,8 @@ def trim_name(
 # Name validation is intentionally simple for MVP.
 # Add profanity filtering, unicode normalization,
 # and advanced validation rules later.
+
+
 def validate_name(
     name: str,
 ) -> bool:

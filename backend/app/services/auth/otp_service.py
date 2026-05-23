@@ -81,11 +81,7 @@ def reset_otp_record(
 ):
 
     otp_record.otp_hash = hashed_otp
-
     otp_record.expires_at = otp_expiration
-
     otp_record.created_at = datetime.now(timezone.utc)
-
     otp_record.attempts = 0
-
     otp_record.verified = False

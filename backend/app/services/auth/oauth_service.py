@@ -1,3 +1,5 @@
+from fastapi import status
+
 from sqlmodel import (
     Session,
 )
@@ -100,23 +102,25 @@ def handle_google_auth_callback(
     if not google_user_id or not email or not name:
 
         raise AuthError(
-            400,
+            status.HTTP_400_BAD_REQUEST,
             "Invalid Google user data",
+            "INVALID_GOOGLE_USER_DATA",
         )
 
     if not email_verified:
 
         raise AuthError(
-            400,
+            status.HTTP_400_BAD_REQUEST,
             "Google email not verified",
+            "GOOGLE_EMAIL_NOT_VERIFIED",
         )
 
     email = normalize_email(
         email,
     )
 
-        # Existing Google OAuth Login
-    
+    # Existing Google OAuth Login
+
     provider_user = get_user_by_provider(
         session,
         GOOGLE_PROVIDER,
@@ -132,6 +136,9 @@ def handle_google_auth_callback(
             session,
             provider_user,
         )
+        
+        session.commit()
+
 
         return {
             "type": "login",
@@ -140,8 +147,8 @@ def handle_google_auth_callback(
             "refresh_token": refresh_token,
         }
 
-        # Guest Upgrade Flow
-    
+    # Guest Upgrade Flow
+
     if current_user and current_user.is_guest:
 
         existing_google_provider = get_user_by_provider(
@@ -153,8 +160,9 @@ def handle_google_auth_callback(
         if existing_google_provider:
 
             raise AuthError(
-                409,
+                status.HTTP_409_CONFLICT,
                 "Google account already linked",
+                "GOOGLE_ACCOUNT_ALREADY_LINKED",
             )
 
         (
@@ -189,6 +197,8 @@ def handle_google_auth_callback(
             session,
             user,
         )
+        
+        session.commit()
 
         return {
             "type": "login",
@@ -197,8 +207,8 @@ def handle_google_auth_callback(
             "refresh_token": refresh_token,
         }
 
-        # Existing User Account Linking
-    
+    # Existing User Account Linking
+
     existing_user = get_user_by_email(
         session,
         email,
@@ -215,8 +225,9 @@ def handle_google_auth_callback(
         if existing_google_provider:
 
             raise AuthError(
-                409,
+                status.HTTP_409_CONFLICT,
                 "Google account already linked",
+                "GOOGLE_ACCOUNT_ALREADY_LINKED",
             )
 
         create_auth_provider(
@@ -233,6 +244,8 @@ def handle_google_auth_callback(
             session,
             existing_user,
         )
+        
+        session.commit()
 
         return {
             "type": "login",
@@ -241,8 +254,8 @@ def handle_google_auth_callback(
             "refresh_token": refresh_token,
         }
 
-        # New OAuth Signup
-    
+    # New OAuth Signup
+
     oauth_signup_token = create_oauth_signup_token(
         {
             "sub": email,
@@ -273,8 +286,9 @@ def handle_complete_oauth_signup(
     if not payload:
 
         raise AuthError(
-            401,
+            status.HTTP_401_UNAUTHORIZED,
             "Invalid or expired OAuth signup token",
+            "INVALID_OAUTH_SIGNUP_TOKEN",
         )
 
     if not validate_public_role(
@@ -282,8 +296,9 @@ def handle_complete_oauth_signup(
     ):
 
         raise AuthError(
-            403,
+            status.HTTP_403_FORBIDDEN,
             "Invalid public role",
+            "INVALID_PUBLIC_ROLE",
         )
 
     email = payload.get(
@@ -301,8 +316,9 @@ def handle_complete_oauth_signup(
     if not email or not name or not google_user_id:
 
         raise AuthError(
-            400,
+            status.HTTP_400_BAD_REQUEST,
             "Invalid OAuth signup payload",
+            "INVALID_OAUTH_SIGNUP_PAYLOAD",
         )
 
     email = normalize_email(
@@ -317,8 +333,9 @@ def handle_complete_oauth_signup(
     if existing_user:
 
         raise AuthError(
-            409,
+            status.HTTP_409_CONFLICT,
             "Account already exists",
+            "ACCOUNT_ALREADY_EXISTS",
         )
 
     user = build_oauth_user(
@@ -342,6 +359,8 @@ def handle_complete_oauth_signup(
         session,
         user,
     )
+    
+    session.commit()
 
     return (
         user,

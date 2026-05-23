@@ -1,15 +1,11 @@
 import uuid
 from uuid import UUID
 from typing import Any
-from fastapi import Response
 from datetime import datetime, timezone
 
 from sqlmodel import (
     Session, select
 )
-
-from app.core.config import settings
-
 from app.models.auth.refresh_session import (
     RefreshSession,
 )
@@ -67,39 +63,6 @@ def get_refresh_session_by_id(
 
     return session.exec(statement).first()
 
-
-def set_refresh_cookie(
-    response: Response,
-    refresh_token: str,
-):
-
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        # TODO:
-        # Enable secure=True in production
-        # after HTTPS deployment.
-        secure=False,
-        samesite="lax",
-        path="/",
-        max_age=(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60),
-    )
-
-
-def clear_refresh_cookie(
-    response: Response,
-):
-
-    response.delete_cookie(
-        key="refresh_token",
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        path="/",
-    )
-
-
 def create_user_auth_session(
     session: Session,
     user,
@@ -126,22 +89,12 @@ def create_user_auth_session(
     session.add(
         refresh_session,
     )
-
-    session.commit()
-
+    
     return (
         access_token,
         refresh_token,
     )
     
-def create_access_token_only(user):
-    return create_access_token(
-        {
-            "sub": str(user.id),
-            "token_version": user.token_version,
-        }
-    )
-
 
 def build_auth_response(
     user,

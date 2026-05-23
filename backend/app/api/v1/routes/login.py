@@ -1,7 +1,7 @@
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
+    Request,
     Response,
     Cookie,
 )
@@ -10,6 +10,10 @@ from sqlmodel import Session
 
 from app.core.database import (
     get_session,
+)
+
+from app.core.rate_limit import (
+    limiter,
 )
 
 from app.schemas.auth.login import (
@@ -24,9 +28,12 @@ from app.api.v1.dependencies.auth import (
     get_current_user,
 )
 
-from app.services.auth.auth_sessions import (
+from app.core.security import (
     set_refresh_cookie,
     clear_refresh_cookie,
+)
+
+from app.services.auth.auth_sessions import (
     build_auth_response,
 )
 
@@ -36,47 +43,30 @@ from app.services.auth.login_service import (
     handle_logout,
 )
 
-from app.core.exceptions.auth import (
-    AuthError,
-)
-
 router = APIRouter(
     prefix="/auth",
     tags=["Login"],
 )
 
 
-def raise_auth_error(
-    exc: AuthError,
-):
-
-    raise HTTPException(
-        status_code=exc.status_code,
-        detail=exc.detail,
-    )
-
-
 @router.post("/login")
+@limiter.limit("10/minute")
 def login(
-    request: LoginRequest,
+    request: Request,
+    request_data: LoginRequest,
     response: Response,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        (
-            user,
-            access_token,
-            refresh_token,
-        ) = handle_login(
-            session,
-            request.identifier,
-            request.password,
-        )
-
-    except AuthError as exc:
-        raise_auth_error(exc)
+    (
+        user,
+        access_token,
+        refresh_token,
+    ) = handle_login(
+        session,
+        request_data.identifier,
+        request_data.password,
+    )
 
     set_refresh_cookie(
         response,
@@ -94,26 +84,22 @@ def login(
 
 
 @router.post("/refresh")
+@limiter.limit("60/minute")
 def refresh_access_token(
+    request: Request,
     response: Response,
     session: Session = Depends(get_session),
     refresh_token: str | None = Cookie(default=None),
 ):
 
-    try:
-
-        (
-            user,
-            access_token,
-            new_refresh_token,
-        ) = handle_refresh_token(
-            session,
-            refresh_token,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    (
+        user,
+        access_token,
+        new_refresh_token,
+    ) = handle_refresh_token(
+        session,
+        refresh_token,
+    )
 
     if new_refresh_token:
 
@@ -132,7 +118,9 @@ def refresh_access_token(
 
 
 @router.post("/logout")
+@limiter.limit("60/minute")
 def logout(
+    request: Request,
     response: Response,
     session: Session = Depends(get_session),
     refresh_token: str | None = Cookie(default=None),

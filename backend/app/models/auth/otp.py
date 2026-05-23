@@ -5,8 +5,6 @@ from uuid import UUID
 
 from sqlmodel import SQLModel, Field
 
-from app.core.enums import OTPPurpose
-
 
 class OTP(SQLModel, table=True):
     __tablename__: str = "otp_codes"
@@ -26,11 +24,7 @@ class OTP(SQLModel, table=True):
     )
 
     otp_hash: str = Field(nullable=False)
-
     attempts: int = Field(default=0)
-
     expires_at: datetime = Field(nullable=False)
-
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
     verified: bool = Field(default=False)

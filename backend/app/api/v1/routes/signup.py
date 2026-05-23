@@ -1,9 +1,9 @@
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Response,
     BackgroundTasks,
+    Request,
 )
 
 from sqlmodel import Session
@@ -16,12 +16,12 @@ from app.core.database import (
     get_session,
 )
 
-from app.services.auth.email_service import (
-    send_email,
+from app.core.rate_limit import (
+    limiter,
 )
 
-from app.core.exceptions.auth import (
-    AuthError,
+from app.services.auth.email_service import (
+    send_email,
 )
 
 from app.models.auth.user import (
@@ -42,6 +42,9 @@ from app.services.auth.auth_queries import (
 
 from app.services.auth.auth_sessions import (
     build_auth_response,
+)
+
+from app.core.security import (
     set_refresh_cookie,
 )
 
@@ -64,19 +67,11 @@ router = APIRouter(
 )
 
 
-def raise_auth_error(
-    exc: AuthError,
-):
-
-    raise HTTPException(
-        status_code=exc.status_code,
-        detail=exc.detail,
-    )
-
-
 @router.post("/signup/request")
+@limiter.limit("5/minute")
 def signup_request(
-    request: SignupRequest,
+    request: Request,
+    request_data: SignupRequest,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User | None = Depends(
@@ -89,18 +84,12 @@ def signup_request(
     if current_user and current_user.is_guest:
         existing_user_id = current_user.id
 
-    try:
-
-        result = handle_signup_request(
-            session=session,
-            email=request.email,
-            name=request.name,
-            existing_user_id=existing_user_id,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    result = handle_signup_request(
+        session=session,
+        email=request_data.email,
+        name=request_data.name,
+        existing_user_id=existing_user_id,
+    )
 
     email_data = result.pop(
         "email_data",
@@ -125,22 +114,18 @@ def signup_request(
 
 
 @router.post("/signup/verify")
+@limiter.limit("10/minute")
 def verify_signup_otp(
-    request: VerifySignupOTPRequest,
+    request: Request,
+    request_data: VerifySignupOTPRequest,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        result = handle_verify_signup_otp(
-            session=session,
-            email=request.email,
-            otp=request.otp,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    result = handle_verify_signup_otp(
+        session=session,
+        email=request_data.email,
+        otp=request_data.otp,
+    )
 
     return {
         "message": "OTP verified successfully",
@@ -149,44 +134,37 @@ def verify_signup_otp(
 
 
 @router.get("/signup/session/{signup_token}")
+@limiter.limit("20/minute")
 def validate_signup(
+    request: Request,
     signup_token: str,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        result = validate_signup_session(
-            session=session,
-            signup_token=signup_token,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    result = validate_signup_session(
+        session=session,
+        signup_token=signup_token,
+    )
 
     return {
         "message": "Signup session valid",
         **result,
     }
 
+
 @router.post("/signup/resend")
+@limiter.limit("3/minute")
 def resend_signup_otp(
-    request: ResendSignupOTPRequest,
+    request: Request,
+    request_data: ResendSignupOTPRequest,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        result = handle_resend_signup_otp(
-            session=session,
-            email=request.email,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    result = handle_resend_signup_otp(
+        session=session,
+        email=request_data.email,
+    )
 
     email_data = result.get(
         "email_data",
@@ -208,31 +186,28 @@ def resend_signup_otp(
         "message": "OTP resent successfully",
     }
 
+
 @router.post("/signup/complete")
+@limiter.limit("10/minute")
 def complete_signup(
-    request: CompleteSignupRequest,
+    request: Request,
+    request_data: CompleteSignupRequest,
     response: Response,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        (
-            user,
-            access_token,
-            refresh_token,
-        ) = handle_complete_signup(
-            session=session,
-            signup_token=request.signup_token,
-            username=request.username,
-            password=request.password,
-            confirm_password=request.confirm_password,
-            role=request.role,
-        )
-
-    except AuthError as exc:
-
-        raise_auth_error(exc)
+    (
+        user,
+        access_token,
+        refresh_token,
+    ) = handle_complete_signup(
+        session=session,
+        signup_token=request_data.signup_token,
+        username=request_data.username,
+        password=request_data.password,
+        confirm_password=request_data.confirm_password,
+        role=request_data.role,
+    )
 
     set_refresh_cookie(
         response,
@@ -245,14 +220,17 @@ def complete_signup(
         "Signup completed successfully",
     )
 
+
 @router.post("/username/check")
+@limiter.limit("30/minute")
 def check_username_availability(
-    request: UsernameAvailabilityRequest,
+    request: Request,
+    request_data: UsernameAvailabilityRequest,
     session: Session = Depends(get_session),
 ):
 
     normalized_username = normalize_username(
-        request.username,
+        request_data.username,
     )
 
     if not validate_username(

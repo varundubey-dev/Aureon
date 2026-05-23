@@ -26,13 +26,13 @@ from app.services.auth.auth_queries import (
     get_user_by_email,
 )
 
-from app.services.auth.auth_validators import (
-    normalize_email,
-)
-
 from app.services.auth.auth_tokens import (
     create_password_reset_token,
     verify_password_reset_token,
+)
+
+from app.services.auth.auth_validators import (
+    normalize_email,
 )
 
 from app.services.auth.email_templates import (
@@ -70,15 +70,15 @@ def handle_password_reset_request(
         normalized_email,
     )
 
-        # Silent success:
+    # Silent success:
     # Never reveal account existence
-    
+
     if not user:
 
         return {}
 
-        # Google-only accounts
-    
+    # Google-only accounts
+
     local_provider = get_local_auth_provider(
         session,
         user.id,
@@ -89,6 +89,7 @@ def handle_password_reset_request(
         raise AuthError(
             status.HTTP_403_FORBIDDEN,
             "Password reset unavailable for social login accounts",
+            "SOCIAL_LOGIN_PASSWORD_RESET_UNAVAILABLE",
         )
 
     existing_otp = session.exec(
@@ -111,6 +112,7 @@ def handle_password_reset_request(
                 raise AuthError(
                     status.HTTP_429_TOO_MANY_REQUESTS,
                     "OTP resend cooldown active",
+                    "OTP_RESEND_COOLDOWN_ACTIVE",
                 )
 
     otp = generate_otp()
@@ -173,8 +175,8 @@ def handle_password_reset_resend_otp(
         normalized_email,
     )
 
-        # Silent success
-    
+    # Silent success
+
     if not user:
 
         return {}
@@ -189,6 +191,7 @@ def handle_password_reset_resend_otp(
         raise AuthError(
             status.HTTP_403_FORBIDDEN,
             "Password reset unavailable for social login accounts",
+            "SOCIAL_LOGIN_PASSWORD_RESET_UNAVAILABLE",
         )
 
     otp_record = session.exec(
@@ -203,6 +206,7 @@ def handle_password_reset_resend_otp(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "OTP not found",
+            "OTP_NOT_FOUND",
         )
 
     if otp_record.verified:
@@ -210,6 +214,7 @@ def handle_password_reset_resend_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP already verified",
+            "OTP_ALREADY_VERIFIED",
         )
 
     if not is_resend_allowed(
@@ -219,6 +224,7 @@ def handle_password_reset_resend_otp(
         raise AuthError(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "OTP resend cooldown active",
+            "OTP_RESEND_COOLDOWN_ACTIVE",
         )
 
     otp = generate_otp()
@@ -276,6 +282,7 @@ def handle_verify_password_reset_otp(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "OTP not found",
+            "OTP_NOT_FOUND",
         )
 
     if otp_record.verified:
@@ -283,6 +290,7 @@ def handle_verify_password_reset_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP already verified",
+            "OTP_ALREADY_VERIFIED",
         )
 
     if is_otp_expired(
@@ -292,6 +300,7 @@ def handle_verify_password_reset_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP expired",
+            "OTP_EXPIRED",
         )
 
     if has_exceeded_attempts(
@@ -300,7 +309,8 @@ def handle_verify_password_reset_otp(
 
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
-            ("Maximum OTP attempts exceeded"),
+            "Maximum OTP attempts exceeded",
+            "OTP_MAX_ATTEMPTS_EXCEEDED",
         )
 
     if not verify_otp(
@@ -319,6 +329,7 @@ def handle_verify_password_reset_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Invalid OTP",
+            "INVALID_OTP",
         )
 
     otp_record.verified = True
@@ -354,7 +365,8 @@ def handle_complete_password_reset(
 
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
-            ("Invalid or expired reset token"),
+            "Invalid or expired reset token",
+            "INVALID_RESET_TOKEN",
         )
 
     user = get_user_by_email(
@@ -367,6 +379,7 @@ def handle_complete_password_reset(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "User not found",
+            "USER_NOT_FOUND",
         )
 
     local_provider = get_local_auth_provider(
@@ -378,14 +391,16 @@ def handle_complete_password_reset(
 
         raise AuthError(
             status.HTTP_403_FORBIDDEN,
-            ("Password reset unavailable for social login accounts"),
+            "Password reset unavailable for social login accounts",
+            "SOCIAL_LOGIN_PASSWORD_RESET_UNAVAILABLE",
         )
 
     if new_password != confirm_password:
 
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
-            ("Passwords do not match"),
+            "Passwords do not match",
+            "PASSWORDS_DO_NOT_MATCH",
         )
 
     if not validate_password_strength(
@@ -395,6 +410,7 @@ def handle_complete_password_reset(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Weak password",
+            "WEAK_PASSWORD",
         )
 
     password_hash = hash_password(
@@ -403,8 +419,8 @@ def handle_complete_password_reset(
 
     user.password_hash = password_hash
 
-        # Kill all access tokens
-    
+    # Kill all access tokens
+
     user.token_version += 1
 
     session.add(

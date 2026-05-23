@@ -1,11 +1,13 @@
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Request,
     Response,
 )
-from fastapi.responses import RedirectResponse
+
+from fastapi.responses import (
+    RedirectResponse,
+)
 
 from sqlmodel import Session
 
@@ -19,8 +21,12 @@ from app.core.database import (
     get_session,
 )
 
-from app.core.exceptions.auth import (
-    AuthError,
+from app.core.rate_limit import (
+    limiter,
+)
+
+from app.core.security import (
+    set_refresh_cookie,
 )
 
 from app.models.auth.user import (
@@ -33,7 +39,6 @@ from app.schemas.auth.oauth import (
 
 from app.services.auth.auth_sessions import (
     build_auth_response,
-    set_refresh_cookie,
 )
 
 from app.services.auth.oauth_service import (
@@ -51,26 +56,14 @@ router = APIRouter(
 )
 
 
-def raise_auth_error(
-    exc: AuthError,
-):
-
-    raise HTTPException(
-        status_code=exc.status_code,
-        detail=exc.detail,
-    )
-
-
 @router.get("/google/login")
+@limiter.limit("10/minute")
 async def google_login(
     request: Request,
     current_user: User | None = Depends(
         get_optional_session_user,
     ),
 ):
-
-    print(current_user)
-    print(request.cookies)
 
     if current_user and current_user.is_guest:
 
@@ -85,6 +78,7 @@ async def google_login(
 
 
 @router.get("/google/callback")
+@limiter.limit("20/minute")
 async def google_callback(
     request: Request,
     session: Session = Depends(get_session),
@@ -118,30 +112,26 @@ async def google_callback(
 
     if not user_info:
 
-        raise HTTPException(
-            status_code=400,
-            detail="Failed to fetch Google user info",
+        return RedirectResponse(
+            url=(
+                f"{settings.FRONTEND_URL}"
+                f"/oauth/error"
+                f"?message=Failed to fetch Google user info"
+            ),
+            status_code=302,
         )
 
-    try:
+    result = handle_google_auth_callback(
+        session,
+        google_user_id=user_info.get("sub"),
+        email=user_info.get("email"),
+        name=user_info.get("name"),
+        email_verified=user_info.get("email_verified"),
+        current_user=guest_user,
+    )
 
-        result = handle_google_auth_callback(
-            session,
-            google_user_id=user_info.get("sub"),
-            email=user_info.get("email"),
-            name=user_info.get("name"),
-            email_verified=user_info.get("email_verified"),
-            current_user=guest_user,
-        )
+    # Existing Login
 
-    except AuthError as exc:
-
-        raise_auth_error(
-            exc,
-        )
-
-        # Existing Login
-    
     if result["type"] == "login":
 
         redirect_response = RedirectResponse(
@@ -156,8 +146,8 @@ async def google_callback(
 
         return redirect_response
 
-        # New OAuth Signup
-    
+    # New OAuth Signup
+
     return RedirectResponse(
         url=(
             f"{settings.FRONTEND_URL}"
@@ -169,30 +159,23 @@ async def google_callback(
 
 
 @router.post("/google/complete")
+@limiter.limit("5/minute")
 def complete_google_signup(
-    request: CompleteOAuthSignupRequest,
+    request: Request,
+    request_data: CompleteOAuthSignupRequest,
     response: Response,
     session: Session = Depends(get_session),
 ):
 
-    try:
-
-        (
-            user,
-            access_token,
-            refresh_token,
-        ) = handle_complete_oauth_signup(
-            session,
-            oauth_signup_token=request.oauth_signup_token,
-            role=request.role,
-        )
-
-    except AuthError as exc:
-
-        return RedirectResponse(
-            url=(f"{settings.FRONTEND_URL}" f"/oauth/error" f"?message={exc.detail}"),
-            status_code=302,
-        )
+    (
+        user,
+        access_token,
+        refresh_token,
+    ) = handle_complete_oauth_signup(
+        session,
+        oauth_signup_token=request_data.oauth_signup_token,
+        role=request_data.role,
+    )
 
     set_refresh_cookie(
         response,

@@ -28,14 +28,14 @@ from app.services.auth.auth_sessions import (
 )
 
 from app.services.auth.auth_tokens import (
-    verify_refresh_token,
-    create_refresh_token,
     create_access_token,
+    create_refresh_token,
+    verify_refresh_token,
 )
 
 from app.services.auth.password_service import (
-    verify_password,
     hash_password,
+    verify_password,
 )
 
 
@@ -55,6 +55,7 @@ def handle_login(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid credentials",
+            "INVALID_CREDENTIALS",
         )
 
     local_provider = get_local_auth_provider(
@@ -62,13 +63,14 @@ def handle_login(
         user.id,
     )
 
-        # OAuth-only account
-    
+    # OAuth-only account
+
     if not local_provider:
 
         raise AuthError(
             status.HTTP_403_FORBIDDEN,
-            ("This account uses social login. Please continue with Google."),
+            "This account uses social login. Please continue with Google.",
+            "SOCIAL_LOGIN_REQUIRED",
         )
 
     if not user.password_hash:
@@ -76,6 +78,7 @@ def handle_login(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Password login unavailable",
+            "PASSWORD_LOGIN_UNAVAILABLE",
         )
 
     if not verify_password(
@@ -86,6 +89,7 @@ def handle_login(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid credentials",
+            "INVALID_CREDENTIALS",
         )
 
     (
@@ -115,6 +119,7 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh token missing",
+            "REFRESH_TOKEN_MISSING",
         )
 
     payload = verify_refresh_token(
@@ -126,6 +131,7 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid refresh token",
+            "INVALID_REFRESH_TOKEN",
         )
 
     user_id = payload.get(
@@ -141,6 +147,7 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid refresh token",
+            "INVALID_REFRESH_TOKEN",
         )
 
     refresh_session = get_refresh_session_by_id(
@@ -153,6 +160,7 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh session invalid",
+            "INVALID_REFRESH_SESSION",
         )
 
     if not verify_password(
@@ -163,6 +171,7 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh session invalid",
+            "INVALID_REFRESH_SESSION",
         )
 
     if str(refresh_session.user_id) != user_id:
@@ -170,6 +179,7 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh session invalid",
+            "INVALID_REFRESH_SESSION",
         )
 
     user = session.get(
@@ -182,6 +192,7 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "User not found",
+            "USER_NOT_FOUND",
         )
 
     if refresh_session.expires_at < datetime.now(timezone.utc):
@@ -195,19 +206,22 @@ def handle_refresh_token(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Refresh token expired",
+            "REFRESH_TOKEN_EXPIRED",
         )
 
-        # Sliding refresh session
-    
+    # Sliding refresh session
+
     now = datetime.now(timezone.utc)
 
     remaining_time = (refresh_session.expires_at - now).days
 
     # Default:
     # Keep SAME refresh token
+
     new_refresh_token = None
 
     # Renew ONLY near expiry
+
     if remaining_time <= 7:
 
         (
@@ -229,6 +243,7 @@ def handle_refresh_token(
         )
 
     # New short-lived access token
+
     access_token = create_access_token(
         {
             "sub": str(user.id),

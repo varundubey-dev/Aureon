@@ -115,6 +115,7 @@ def handle_signup_request(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Invalid name format",
+            "INVALID_NAME_FORMAT",
         )
 
     existing_user = get_user_by_email(
@@ -122,8 +123,8 @@ def handle_signup_request(
         normalized_email,
     )
 
-        # Existing Local Account
-    
+    # Existing Local Account
+
     if existing_user:
 
         if not existing_user.email:
@@ -131,6 +132,7 @@ def handle_signup_request(
             raise AuthError(
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 "Account email corrupted",
+                "ACCOUNT_EMAIL_CORRUPTED",
             )
 
         if has_local_auth_provider(
@@ -141,6 +143,7 @@ def handle_signup_request(
             raise AuthError(
                 status.HTTP_400_BAD_REQUEST,
                 "Account already exists",
+                "ACCOUNT_ALREADY_EXISTS",
             )
 
     existing_pending_signup = get_pending_signup(
@@ -153,8 +156,8 @@ def handle_signup_request(
         normalized_email,
     )
 
-        # OTP Cooldown
-    
+    # OTP Cooldown
+
     if existing_otp:
 
         if not is_otp_expired(
@@ -168,6 +171,7 @@ def handle_signup_request(
                 raise AuthError(
                     status.HTTP_429_TOO_MANY_REQUESTS,
                     "OTP resend cooldown active",
+                    "OTP_RESEND_COOLDOWN_ACTIVE",
                 )
 
     otp = generate_otp()
@@ -199,8 +203,8 @@ def handle_signup_request(
 
     linked_user_id = existing_user_id
 
-        # OAuth-first Account
-    
+    # OAuth-first Account
+
     if existing_user and not has_local_auth_provider(
         session,
         existing_user.id,
@@ -240,13 +244,14 @@ def handle_signup_request(
     )
 
     session.commit()
-    
+
     signup_type = "otp_verification"
 
     if existing_user and not has_local_auth_provider(
         session,
         existing_user.id,
     ):
+
         signup_type = "complete_local_setup"
 
     return {
@@ -283,6 +288,7 @@ def handle_verify_signup_otp(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "OTP not found",
+            "OTP_NOT_FOUND",
         )
 
     pending_signup = get_pending_signup(
@@ -295,6 +301,7 @@ def handle_verify_signup_otp(
         raise AuthError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             "Pending signup state corrupted",
+            "PENDING_SIGNUP_CORRUPTED",
         )
 
     if pending_signup.verified:
@@ -302,6 +309,7 @@ def handle_verify_signup_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Signup already verified",
+            "SIGNUP_ALREADY_VERIFIED",
         )
 
     if otp_record.verified:
@@ -309,6 +317,7 @@ def handle_verify_signup_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP already verified",
+            "OTP_ALREADY_VERIFIED",
         )
 
     if is_otp_expired(
@@ -318,6 +327,7 @@ def handle_verify_signup_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP expired",
+            "OTP_EXPIRED",
         )
 
     if has_exceeded_attempts(
@@ -327,6 +337,7 @@ def handle_verify_signup_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Maximum OTP attempts exceeded",
+            "OTP_MAX_ATTEMPTS_EXCEEDED",
         )
 
     if not verify_otp(
@@ -345,6 +356,7 @@ def handle_verify_signup_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Invalid OTP",
+            "INVALID_OTP",
         )
 
     otp_record.verified = True
@@ -377,8 +389,8 @@ def handle_verify_signup_otp(
 
     signup_type = "normal_signup"
 
-        # OAuth-first Account
-    
+    # OAuth-first Account
+
     if existing_user and not has_local_auth_provider(
         session,
         existing_user.id,
@@ -410,6 +422,7 @@ def validate_signup_session(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid or expired signup session",
+            "INVALID_SIGNUP_SESSION",
         )
 
     pending_signup = get_pending_signup(
@@ -422,6 +435,7 @@ def validate_signup_session(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "Pending signup not found",
+            "PENDING_SIGNUP_NOT_FOUND",
         )
 
     if not pending_signup.verified:
@@ -429,6 +443,7 @@ def validate_signup_session(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Signup verification required",
+            "SIGNUP_VERIFICATION_REQUIRED",
         )
 
     existing_user = get_user_by_email(
@@ -438,8 +453,8 @@ def validate_signup_session(
 
     signup_type = "normal_signup"
 
-        # OAuth-first Account
-    
+    # OAuth-first Account
+
     if existing_user and not has_local_auth_provider(
         session,
         existing_user.id,
@@ -480,6 +495,7 @@ def handle_resend_signup_otp(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "OTP not found",
+            "OTP_NOT_FOUND",
         )
 
     pending_signup = get_pending_signup(
@@ -492,6 +508,7 @@ def handle_resend_signup_otp(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "Pending signup not found",
+            "PENDING_SIGNUP_NOT_FOUND",
         )
 
     if pending_signup.verified:
@@ -499,6 +516,7 @@ def handle_resend_signup_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Signup already verified",
+            "SIGNUP_ALREADY_VERIFIED",
         )
 
     if otp_record.verified:
@@ -506,6 +524,7 @@ def handle_resend_signup_otp(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "OTP already verified",
+            "OTP_ALREADY_VERIFIED",
         )
 
     if not is_resend_allowed(
@@ -515,6 +534,7 @@ def handle_resend_signup_otp(
         raise AuthError(
             status.HTTP_429_TOO_MANY_REQUESTS,
             "OTP resend cooldown active",
+            "OTP_RESEND_COOLDOWN_ACTIVE",
         )
 
     otp = generate_otp()
@@ -578,6 +598,7 @@ def handle_complete_signup(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Invalid or expired signup token",
+            "INVALID_SIGNUP_TOKEN",
         )
 
     normalized_username = normalize_username(
@@ -591,6 +612,7 @@ def handle_complete_signup(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Invalid username format",
+            "INVALID_USERNAME_FORMAT",
         )
 
     if is_username_taken(
@@ -601,6 +623,7 @@ def handle_complete_signup(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Username already taken",
+            "USERNAME_ALREADY_TAKEN",
         )
 
     if password != confirm_password:
@@ -608,6 +631,7 @@ def handle_complete_signup(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Passwords do not match",
+            "PASSWORDS_DO_NOT_MATCH",
         )
 
     if not validate_password_strength(
@@ -617,6 +641,7 @@ def handle_complete_signup(
         raise AuthError(
             status.HTTP_400_BAD_REQUEST,
             "Weak password",
+            "WEAK_PASSWORD",
         )
 
     password_hash = hash_password(
@@ -633,6 +658,7 @@ def handle_complete_signup(
         raise AuthError(
             status.HTTP_404_NOT_FOUND,
             "Pending signup not found",
+            "PENDING_SIGNUP_NOT_FOUND",
         )
 
     if not pending_signup.verified:
@@ -640,6 +666,7 @@ def handle_complete_signup(
         raise AuthError(
             status.HTTP_401_UNAUTHORIZED,
             "Signup verification required",
+            "SIGNUP_VERIFICATION_REQUIRED",
         )
 
     existing_user = get_user_by_email(
@@ -647,8 +674,8 @@ def handle_complete_signup(
         signup_email,
     )
 
-        # OAuth-first Account
-    
+    # OAuth-first Account
+
     if existing_user and not has_local_auth_provider(
         session,
         existing_user.id,
@@ -668,8 +695,8 @@ def handle_complete_signup(
             user,
         )
 
-        # Guest Upgrade
-    
+    # Guest Upgrade
+
     elif pending_signup.existing_user_id:
 
         if role != UserRole.LISTENER.value:
@@ -677,6 +704,7 @@ def handle_complete_signup(
             raise AuthError(
                 status.HTTP_403_FORBIDDEN,
                 "Guest accounts can only upgrade to listener accounts",
+                "INVALID_GUEST_UPGRADE_ROLE",
             )
 
         user = session.get(
@@ -689,6 +717,7 @@ def handle_complete_signup(
             raise AuthError(
                 status.HTTP_404_NOT_FOUND,
                 "Existing user not found",
+                "EXISTING_USER_NOT_FOUND",
             )
 
         user = upgrade_guest_account(
@@ -701,8 +730,8 @@ def handle_complete_signup(
             password_hash=password_hash,
         )
 
-        # Fresh Local Signup
-    
+    # Fresh Local Signup
+
     else:
 
         if not validate_public_role(
@@ -712,6 +741,7 @@ def handle_complete_signup(
             raise AuthError(
                 status.HTTP_403_FORBIDDEN,
                 "Invalid public role",
+                "INVALID_PUBLIC_ROLE",
             )
 
         user = User(

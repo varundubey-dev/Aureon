@@ -1,7 +1,5 @@
 from fastapi import (
     Depends,
-    HTTPException,
-    status,
 )
 
 from app.api.v1.dependencies.auth import (
@@ -10,6 +8,10 @@ from app.api.v1.dependencies.auth import (
 
 from app.core.enums import (
     UserRole,
+)
+
+from app.core.exceptions.auth import (
+    AuthError,
 )
 
 from app.models.auth.user import (
@@ -27,28 +29,18 @@ def require_roles(
         ),
     ) -> User:
 
-                # Admin bypass
-        
-        if (
-            current_user.role
-            == UserRole.ADMIN.value
-        ):
+        # Admin bypass
+
+        if current_user.role == UserRole.ADMIN.value:
 
             return current_user
 
-        if (
-            current_user.role
-            not in allowed_roles
-        ):
+        if current_user.role not in allowed_roles:
 
-            raise HTTPException(
-                status_code=(
-                    status.HTTP_403_FORBIDDEN
-                ),
-                detail=(
-                    "You do not have permission "
-                    "to access this resource"
-                ),
+            raise AuthError(
+                status_code=403,
+                detail=("You do not have permission to access this resource"),
+                code="INSUFFICIENT_PERMISSIONS",
             )
 
         return current_user

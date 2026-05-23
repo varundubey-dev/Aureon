@@ -744,11 +744,11 @@ Commit - 7e09080
 - Username validation UX is now smoother and less visually unstable
 - Frontend signup architecture now properly supports multiple auth entry flows
 
-# Commit 14 — Cleanup & Maintenance Infrastructure
+## 23 May 2026 — Cleanup & Maintenance Infrastructure
 
-Commit - <hash>
+Commit - f413932
 
-## Completed 
+### Completed 
 
 - Added expired OTP cleanup system
 - Added expired refresh session cleanup
@@ -760,9 +760,36 @@ Commit - <hash>
 - Added centralized maintenance services
 - Added UTC-based cleanup handling
 
-## Notes
+### Notes
 
 - Expired signup OTPs now automatically remove related pending signups
 - Guest accounts are deleted only when no active sessions remain
 - Cleanup jobs are isolated into dedicated maintenance services
 - Maintenance system is now ready for future Celery/Redis migration
+
+## 24 May 2026 — Auth Security & Architecture Stabilization
+
+Commit - <hash>
+
+### Completed
+
+- Added centralized global exception handling
+- Added structured auth error codes
+- Refactored auth routes to use global exceptions
+- Added centralized app error architecture
+- Added auth rate limiting using SlowAPI
+- Added rate limits for login, signup, OTP, OAuth, guest, and password reset routes
+- Added centralized refresh cookie security handling
+- Unified cookie expiration configuration
+- Added configurable secure cookie environment support
+- Refactored auth session flow to avoid hidden commits
+- Improved transaction consistency across auth services
+- Added refresh session row locking for safer concurrent access
+- Cleaned duplicated auth/security logic
+
+### Notes
+
+- Backend auth responses are now stable and test-ready
+- Rate limiting is application-level for now and can later move behind Nginx/Cloudflare
+- Auth transaction flow is now cleaner and more rollback-safe
+- Cookie/security configuration is now centralized and environment-driven
