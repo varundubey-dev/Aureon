@@ -1,11 +1,8 @@
 import uuid
 from uuid import UUID
 from typing import Any
-from datetime import datetime, timezone
 
-from sqlmodel import (
-    Session, select
-)
+from sqlmodel import Session, select
 from app.models.auth.refresh_session import (
     RefreshSession,
 )
@@ -20,6 +17,10 @@ from app.services.auth.password_service import (
 )
 from app.services.auth.auth_utils import (
     generate_profile_initial,
+)
+
+from app.utils.datetime import (
+    get_utc_now,
 )
 
 
@@ -56,21 +57,18 @@ def get_refresh_session_by_id(
 ) -> RefreshSession | None:
 
     statement = (
-        select(RefreshSession)
-        .where(RefreshSession.id == session_id)
-        .with_for_update()
+        select(RefreshSession).where(RefreshSession.id == session_id).with_for_update()
     )
 
     return session.exec(statement).first()
+
 
 def create_user_auth_session(
     session: Session,
     user,
 ):
 
-    user.last_login_at = datetime.now(
-        timezone.utc,
-    )
+    user.last_login_at = get_utc_now()
 
     access_token = create_access_token(
         {
@@ -89,12 +87,12 @@ def create_user_auth_session(
     session.add(
         refresh_session,
     )
-    
+
     return (
         access_token,
         refresh_token,
     )
-    
+
 
 def build_auth_response(
     user,

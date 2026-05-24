@@ -11,6 +11,7 @@ from app.core.exceptions.auth import (
 )
 
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+NAME_REGEX = re.compile(r"^[A-Za-z]+(?:[ '-][A-Za-z]+)*$")
 
 
 def normalize_email(
@@ -62,13 +63,19 @@ def validate_name(
     name: str,
 ) -> bool:
 
-    if len(name) < 2:
+    trimmed_name = name.strip()
+
+    if len(trimmed_name) < 2:
         return False
 
-    if len(name) > 50:
+    if len(trimmed_name) > 50:
         return False
 
-    return True
+    return bool(
+        NAME_REGEX.fullmatch(
+            trimmed_name,
+        )
+    )
 
 
 def validate_username(

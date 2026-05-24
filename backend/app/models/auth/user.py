@@ -1,6 +1,9 @@
 import uuid
 
-from datetime import datetime, timezone
+from datetime import datetime
+from app.utils.datetime import (
+    get_utc_now,
+)
 from typing import Optional
 from uuid import UUID
 
@@ -60,6 +63,6 @@ class User(SQLModel, table=True):
 
     token_version: int = Field(default=0)
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: get_utc_now())
 
     last_login_at: Optional[datetime] = Field(default=None)

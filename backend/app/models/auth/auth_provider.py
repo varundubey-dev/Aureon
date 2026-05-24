@@ -1,7 +1,11 @@
 import uuid
 
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
+
+from app.utils.datetime import (
+    get_utc_now,
+)
 
 from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field
@@ -47,4 +51,4 @@ class AuthProvider(SQLModel, table=True):
         index=True,
     )
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: get_utc_now())

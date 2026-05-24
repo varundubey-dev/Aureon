@@ -1,5 +1,8 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
+from app.utils.datetime import (
+    get_utc_now,
+)
 
 from jose import jwt, JWTError
 
@@ -11,7 +14,7 @@ def create_access_token(
 ) -> str:
     to_encode = data.copy()
 
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = get_utc_now() + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
@@ -55,7 +58,7 @@ def create_refresh_token(
     session_id: str,
 ) -> tuple[str, datetime]:
 
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = get_utc_now() + timedelta(
         days=(settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
 
@@ -103,7 +106,7 @@ def create_signup_token(
     email: str,
 ) -> str:
 
-    expiration = datetime.now(timezone.utc) + timedelta(
+    expiration = get_utc_now() + timedelta(
         minutes=settings.SIGNUP_TOKEN_EXPIRE_MINUTES
     )
 
@@ -152,7 +155,7 @@ def create_password_reset_token(
 ) -> str:
 
     expiration = (
-        datetime.now(timezone.utc)
+        get_utc_now()
         + timedelta(minutes=15)
     )
 
@@ -203,11 +206,7 @@ def create_oauth_signup_token(
     data: dict[str, Any],
 ) -> str:
 
-    expiration = datetime.now(
-        timezone.utc,
-    ) + timedelta(
-        minutes=15,
-    )
+    expiration = get_utc_now() + timedelta(minutes=15)
 
     payload = {
         **data,

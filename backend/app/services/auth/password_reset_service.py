@@ -35,7 +35,7 @@ from app.services.auth.auth_validators import (
     normalize_email,
 )
 
-from app.services.auth.email_templates import (
+from app.services.email.email_templates import (
     generate_password_reset_email_template,
 )
 

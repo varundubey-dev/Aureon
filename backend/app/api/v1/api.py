@@ -1,11 +1,11 @@
 from fastapi import APIRouter
 from app.api.v1.routes.health import router as health_router
-from app.api.v1.routes.signup import router as signup_router
-from app.api.v1.routes.login import router as login_router
-from app.api.v1.routes.password_reset import router as password_reset_router
-from app.api.v1.routes.guest import router as guest_router
-from app.api.v1.routes.oauth import router as oauth_router
-from app.api.v1.routes.rbac_test import router as rbac_test_router
+from app.api.v1.routes.auth.signup import router as signup_router
+from app.api.v1.routes.auth.login import router as login_router
+from app.api.v1.routes.auth.password_reset import router as password_reset_router
+from app.api.v1.routes.auth.guest import router as guest_router
+from app.api.v1.routes.auth.oauth import router as oauth_router
+from app.api.v1.routes.auth.rbac import router as rbac_test_router
 
 api_router = APIRouter(prefix="/api/v1")
 

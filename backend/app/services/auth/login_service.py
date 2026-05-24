@@ -1,13 +1,12 @@
 from uuid import UUID
 
+from app.utils.datetime import (
+    get_utc_now,
+)
+
 from fastapi import status
 
 from sqlmodel import Session
-
-from datetime import (
-    datetime,
-    timezone,
-)
 
 from app.core.exceptions.auth import (
     AuthError,
@@ -36,6 +35,10 @@ from app.services.auth.auth_tokens import (
 from app.services.auth.password_service import (
     hash_password,
     verify_password,
+)
+
+from app.utils.datetime import (
+    ensure_utc_datetime,
 )
 
 
@@ -195,7 +198,11 @@ def handle_refresh_token(
             "USER_NOT_FOUND",
         )
 
-    if refresh_session.expires_at < datetime.now(timezone.utc):
+    expires_at = ensure_utc_datetime(
+        refresh_session.expires_at,
+    )
+
+    if expires_at < get_utc_now():
 
         session.delete(
             refresh_session,
@@ -211,9 +218,9 @@ def handle_refresh_token(
 
     # Sliding refresh session
 
-    now = datetime.now(timezone.utc)
+    now = get_utc_now()
 
-    remaining_time = (refresh_session.expires_at - now).days
+    remaining_time = (expires_at - now).days
 
     # Default:
     # Keep SAME refresh token

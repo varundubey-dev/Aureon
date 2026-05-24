@@ -22,11 +22,11 @@ from app.schemas.auth.password_reset import (
     VerifyPasswordResetOTPRequest,
 )
 
-from app.services.auth.email_service import (
+from app.services.email.email_service import (
     send_email,
 )
 
-from app.services.auth.auth_sessions import (
+from app.core.security import (
     clear_refresh_cookie,
 )
 

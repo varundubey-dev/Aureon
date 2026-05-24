@@ -1,6 +1,9 @@
 import uuid
 
-from datetime import datetime, timezone
+from datetime import datetime
+from app.utils.datetime import (
+    get_utc_now,
+)
 from uuid import UUID
 from typing import Optional
 
@@ -36,4 +39,4 @@ class PendingSignup(SQLModel, table=True):
 
     verified: bool = Field(default=False)
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: get_utc_now())

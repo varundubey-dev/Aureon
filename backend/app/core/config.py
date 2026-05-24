@@ -6,6 +6,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     DATABASE_URL: str
+    TEST_DATABASE_URL: str
     FRONTEND_URL: str
 
     JWT_SECRET_KEY: str

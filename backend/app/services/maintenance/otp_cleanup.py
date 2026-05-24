@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+from app.utils.datetime import (
+    get_utc_now,
+)
 
 from sqlmodel import Session, select
 
@@ -12,10 +14,8 @@ def cleanup_expired_otps(
     session: Session,
 ) -> int:
 
-    now = datetime.now(
-        timezone.utc,
-    )
-
+    now = get_utc_now()
+    
     expired_otps = session.exec(
         select(OTP).where(
             OTP.expires_at < now,

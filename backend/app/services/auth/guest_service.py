@@ -1,6 +1,5 @@
-from datetime import (
-    datetime,
-    timezone,
+from app.utils.datetime import (
+    get_utc_now,
 )
 
 from sqlmodel import (
@@ -36,8 +35,8 @@ def create_guest_user() -> User:
         is_guest=True,
         profile_color=generate_profile_color(),
         token_version=0,
-        created_at=datetime.now(timezone.utc),
-        last_login_at=datetime.now(timezone.utc),
+        created_at=get_utc_now(),
+        last_login_at=get_utc_now(),
     )
 
 
@@ -79,7 +78,7 @@ def upgrade_guest_account(
     user.password_hash = password_hash
     user.role = UserRole.LISTENER.value
     user.is_guest = False
-    user.last_login_at = datetime.now(timezone.utc)
+    user.last_login_at = get_utc_now()
 
     invalidate_user_tokens(user)
 

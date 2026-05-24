@@ -1,4 +1,7 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
+from app.utils.datetime import (
+    get_utc_now,
+)
 
 from sqlmodel import Session, select, col
 
@@ -10,9 +13,7 @@ def cleanup_inactive_guest_accounts(
     session: Session,
 ) -> int:
 
-    cutoff = datetime.now(
-        timezone.utc,
-    ) - timedelta(days=7)
+    cutoff = get_utc_now() - timedelta(days=7)
 
     guest_users = session.exec(
         select(User).where(

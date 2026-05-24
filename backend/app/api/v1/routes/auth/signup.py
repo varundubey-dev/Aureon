@@ -20,7 +20,7 @@ from app.core.rate_limit import (
     limiter,
 )
 
-from app.services.auth.email_service import (
+from app.services.email.email_service import (
     send_email,
 )
 

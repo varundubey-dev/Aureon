@@ -3,7 +3,6 @@ import random
 from datetime import (
     datetime,
     timedelta,
-    timezone,
 )
 
 from passlib.context import (
@@ -13,6 +12,11 @@ from passlib.context import (
 from app.models.auth.otp import OTP
 
 from app.core.config import settings
+
+from app.utils.datetime import (
+    ensure_utc_datetime,
+    get_utc_now,
+)
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -46,7 +50,7 @@ def verify_otp(
 
 def create_otp_expiration() -> datetime:
 
-    return datetime.now(timezone.utc) + timedelta(
+    return get_utc_now() + timedelta(
         minutes=(settings.OTP_EXPIRATION_MINUTES)
     )
 
@@ -55,16 +59,24 @@ def is_otp_expired(
     expires_at: datetime,
 ) -> bool:
 
-    return datetime.now(timezone.utc) > expires_at
+    expires_at = ensure_utc_datetime(
+        expires_at,
+    )
+
+    return get_utc_now() > expires_at
 
 
 def is_resend_allowed(
     created_at: datetime,
 ) -> bool:
 
+    created_at = ensure_utc_datetime(
+        created_at,
+    )
+
     cooldown = timedelta(seconds=(settings.OTP_RESEND_COOLDOWN_SECONDS))
 
-    return (datetime.now(timezone.utc) - created_at) >= cooldown
+    return (get_utc_now() - created_at) >= cooldown
 
 
 def has_exceeded_attempts(
@@ -82,6 +94,6 @@ def reset_otp_record(
 
     otp_record.otp_hash = hashed_otp
     otp_record.expires_at = otp_expiration
-    otp_record.created_at = datetime.now(timezone.utc)
+    otp_record.created_at = get_utc_now()
     otp_record.attempts = 0
     otp_record.verified = False

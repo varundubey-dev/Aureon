@@ -19,10 +19,6 @@ from app.core.rate_limit import (
     limiter,
 )
 
-from app.services.auth.auth_utils import (
-    generate_profile_color,
-)
-
 from app.services.auth.auth_tokens import (
     create_access_token,
 )
@@ -51,7 +47,6 @@ def create_guest_account(
 ):
 
     guest_user = create_guest_user()
-    guest_user.profile_color = generate_profile_color()
 
     session.add(guest_user)
     session.flush()

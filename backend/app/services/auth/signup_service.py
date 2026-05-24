@@ -1,6 +1,5 @@
-from datetime import (
-    datetime,
-    timezone,
+from app.utils.datetime import (
+    get_utc_now,
 )
 
 from fastapi import status
@@ -63,7 +62,7 @@ from app.services.auth.auth_validators import (
     validate_username,
 )
 
-from app.services.auth.email_templates import (
+from app.services.email.email_templates import (
     generate_otp_email_template,
 )
 
@@ -754,9 +753,7 @@ def handle_complete_signup(
             is_admin=False,
             is_guest=False,
             profile_color=generate_profile_color(),
-            last_login_at=datetime.now(
-                timezone.utc,
-            ),
+            last_login_at=get_utc_now(),
         )
 
         session.add(

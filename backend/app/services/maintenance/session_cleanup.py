@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+from app.utils.datetime import (
+    get_utc_now,
+)
 
 from sqlmodel import Session, select
 
@@ -10,9 +12,7 @@ def cleanup_expired_refresh_sessions(
     session: Session,
 ):
 
-    now = datetime.now(
-        timezone.utc,
-    )
+    now = get_utc_now()
 
     expired_sessions = session.exec(
         select(RefreshSession).where(

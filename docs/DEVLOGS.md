@@ -769,7 +769,7 @@ Commit - f413932
 
 ## 24 May 2026 — Auth Security & Architecture Stabilization
 
-Commit - <hash>
+Commit - a66a6ff
 
 ### Completed
 
@@ -793,3 +793,32 @@ Commit - <hash>
 - Rate limiting is application-level for now and can later move behind Nginx/Cloudflare
 - Auth transaction flow is now cleaner and more rollback-safe
 - Cookie/security configuration is now centralized and environment-driven
+
+## 24 May 2026 — Backend Auth Test Coverage Expansion
+
+Commit - <hash>
+
+### Completed 
+
+- Added comprehensive auth route test coverage
+- Added login, refresh, logout, signup, OAuth, and password reset tests
+- Added auth dependency validation tests
+- Added RBAC dependency tests
+- Added auth service unit tests
+- Added JWT token generation and verification tests
+- Added auth validator and password utility tests
+- Added refresh session and auth session tests
+- Added maintenance cleanup service tests
+- Added scheduler behavior tests
+- Added reusable auth testing helpers
+- Refactored backend test folder structure for scalability
+- Added isolated DB transaction-based test setup
+- Added email mocking and rate-limit reset fixtures
+
+### Notes 
+
+- Backend auth system now has broad unit + integration coverage
+- Auth lifecycle behavior is now regression-safe
+- Test structure now cleanly separates routes, services, dependencies, maintenance, and utilities
+- E2E auth lifecycle flows planned separately
+- Current test architecture is scalable for future API/domain expansion
