@@ -10,7 +10,7 @@ from sqlmodel import SQLModel
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 # Import models here so SQLModel registers them
-import app.models
+import app.models  # noqa: F401
 
 # Alembic Config object
 config = context.config
