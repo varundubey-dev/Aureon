@@ -430,6 +430,7 @@ def test_complete_signup_password_mismatch(
 def test_complete_signup_weak_password(
     client,
     session,
+    weak_password,
 ):
 
     signup_token = create_verified_signup_state(
@@ -440,8 +441,8 @@ def test_complete_signup_weak_password(
     response = complete_signup(
         client,
         signup_token,
-        password="123",
-        confirm_password="123",
+        password=weak_password,
+        confirm_password=weak_password,
     )
 
     assert response.status_code == 400

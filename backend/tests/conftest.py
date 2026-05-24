@@ -81,21 +81,48 @@ def mock_send_email():
     with (
         patch(
             "app.api.v1.routes.auth.signup.send_email",
-            return_value=True,
-        ),
+        ) as signup_mock,
         patch(
             "app.api.v1.routes.auth.password_reset.send_email",
-            return_value=True,
-        ),
+        ) as password_reset_mock,
     ):
 
-        yield
+        yield {
+            "signup": signup_mock,
+            "password_reset": password_reset_mock,
+        }
+
 
 @pytest.fixture(autouse=True)
-def mock_generate_otp():
+def mock_google_oauth(monkeypatch):
 
-    with patch(
-        "app.services.auth.otp_service.generate_otp",
-        return_value="123456",
-    ):
-        yield
+    fake_google_user = {
+        "sub": "google-user-999",
+        "email": "varun@gmail.com",
+        "name": "Varun",
+        "email_verified": True,
+    }
+
+    class MockGoogle:
+
+        async def authorize_redirect(
+            self,
+            request,
+            redirect_uri,
+        ):
+            return True
+
+        async def authorize_access_token(
+            self,
+            request,
+        ):
+            return {
+                "userinfo": fake_google_user,
+            }
+
+    monkeypatch.setattr(
+        "app.api.v1.routes.auth.oauth.oauth.google",
+        MockGoogle(),
+    )
+
+    return fake_google_user

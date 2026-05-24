@@ -825,7 +825,7 @@ Commit - bda64cc
 
 ## 24 May 2026 — Frontend Auth Refactor & Flow Consistency
 
-Commit - <hash>
+Commit - 7ca4b8b
 
 ### Completed
 
@@ -860,3 +860,15 @@ Commit - <hash>
 - Signup, login, password reset, and OAuth onboarding now follow a unified structure
 - Frontend auth behavior is now significantly easier to maintain and extend
 - Remaining auth work is primarily focused on testing, security hardening, and edge-case validation
+
+## 24 May 2026 — Backend Auth Test Coverage Expansion
+
+Commit - <hash>
+
+### Completed
+
+- Added local_signup_flow end-to-end auth flow test
+- Added oauth_first_signup_flow onboarding flow test
+- Added oauth_linking_flow account linking flow test
+- Added oauth_signup_flow OAuth signup flow test
+- Added password_reset_flow complete recovery lifecycle test
