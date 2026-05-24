@@ -1,17 +1,22 @@
-import re
-
 from fastapi import status
 
 from app.core.enums import (
     UserRole,
 )
 
+from app.core.constants.auth import (
+    EMAIL_REGEX,
+    NAME_REGEX,
+    USERNAME_REGEX,
+    USERNAME_MIN_LENGTH,
+    USERNAME_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    NAME_MIN_LENGTH,
+)
+
 from app.core.exceptions.auth import (
     AuthError,
 )
-
-EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
-NAME_REGEX = re.compile(r"^[A-Za-z]+(?:[ '-][A-Za-z]+)*$")
 
 
 def normalize_email(
@@ -65,10 +70,10 @@ def validate_name(
 
     trimmed_name = name.strip()
 
-    if len(trimmed_name) < 2:
+    if len(trimmed_name) < NAME_MIN_LENGTH:
         return False
 
-    if len(trimmed_name) > 50:
+    if len(trimmed_name) > NAME_MAX_LENGTH:
         return False
 
     return bool(
@@ -82,16 +87,25 @@ def validate_username(
     username: str,
 ) -> bool:
 
-    if len(username) < 3:
+    if len(username) < USERNAME_MIN_LENGTH:
         return False
 
-    if len(username) > 30:
+    if len(username) > USERNAME_MAX_LENGTH:
         return False
 
-    return username.replace(
-        "_",
-        "",
-    ).isalnum()
+    if (
+        username.startswith("_")
+        or username.endswith("_")
+        or username.startswith(".")
+        or username.endswith(".")
+    ):
+        return False
+
+    return bool(
+        USERNAME_REGEX.fullmatch(
+            username,
+        )
+    )
 
 
 def validate_public_role(

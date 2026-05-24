@@ -2,6 +2,8 @@ import random
 
 from sqlmodel import Session
 
+from app.core.constants.auth import PROFILE_COLORS
+
 from app.services.auth.auth_validators import (
     normalize_username,
 )
@@ -9,14 +11,6 @@ from app.services.auth.auth_validators import (
 from app.services.auth.auth_queries import (
     is_username_taken,
 )
-
-PROFILE_COLORS = [
-    "#FF6B6B",
-    "#4ECDC4",
-    "#45B7D1",
-    "#FFA94D",
-    "#A78BFA",
-]
 
 
 def generate_profile_color() -> str:

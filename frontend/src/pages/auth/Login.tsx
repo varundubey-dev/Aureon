@@ -21,8 +21,12 @@ import {
   validateLoginPassword,
 } from "../../utils/auth_validators";
 
+import { getApiError } from "../../utils/api_errors";
+import { AUTH_ERRORS } from "../../constants/auth_errors";
+
 export default function Login() {
-  usePageTitle("Login")
+  usePageTitle("Login");
+
   const navigate = useNavigate();
 
   const { loginUser, user } = useAuth();
@@ -32,22 +36,33 @@ export default function Login() {
     password: "",
   });
 
-  const [emailError, setEmailError] = useState("");
-
-  const [passwordError, setPasswordError] = useState("");
+  const [errors, setErrors] = useState({
+    identifier: "",
+    password: "",
+  });
 
   const [isLoading, setIsLoading] = useState(false);
+
+  function setFieldError(field: keyof typeof errors, message: string) {
+    setErrors((prev) => ({
+      ...prev,
+      [field]: message,
+    }));
+  }
 
   // Identifier Validation
   useEffect(() => {
     if (!credentials.identifier) {
-      setEmailError("");
+      setFieldError("identifier", "");
 
       return;
     }
 
     const timeout = setTimeout(() => {
-      setEmailError(validateLoginIdentifier(credentials.identifier));
+      setFieldError(
+        "identifier",
+        validateLoginIdentifier(credentials.identifier),
+      );
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -56,13 +71,13 @@ export default function Login() {
   // Password Validation
   useEffect(() => {
     if (!credentials.password) {
-      setPasswordError("");
+      setFieldError("password", "");
 
       return;
     }
 
     const timeout = setTimeout(() => {
-      setPasswordError(validateLoginPassword(credentials.password));
+      setFieldError("password", validateLoginPassword(credentials.password));
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -78,19 +93,19 @@ export default function Login() {
     }));
   }
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  // Login
+  async function handleLogin(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    // Instant validation on submit
     const identifierValidation = validateLoginIdentifier(
       credentials.identifier,
     );
 
     const passwordValidation = validateLoginPassword(credentials.password);
 
-    setEmailError(identifierValidation);
+    setFieldError("identifier", identifierValidation);
 
-    setPasswordError(passwordValidation);
+    setFieldError("password", passwordValidation);
 
     if (identifierValidation || passwordValidation) {
       return;
@@ -109,32 +124,28 @@ export default function Login() {
       navigate(getUserRedirectPath(response.user), {
         replace: true,
       });
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || "Login failed";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      // Invalid credentials
-      if (message.includes("Invalid credentials")) {
-        setPasswordError("Incorrect username/email or password");
+      switch (apiError.code) {
+        case AUTH_ERRORS.INVALID_CREDENTIALS:
+          setFieldError("password", "Incorrect username/email or password");
 
-        return;
+          return;
+
+        case AUTH_ERRORS.SOCIAL_LOGIN_REQUIRED:
+          setFieldError("identifier", apiError.detail);
+
+          return;
+
+        case AUTH_ERRORS.PASSWORD_LOGIN_UNAVAILABLE:
+          setFieldError("password", apiError.detail);
+
+          return;
+
+        default:
+          setFieldError("password", apiError.detail);
       }
-
-      // OAuth-only account
-      if (message.includes("social login")) {
-        setEmailError(message);
-
-        return;
-      }
-
-      // Password disabled
-      if (message.includes("Password login unavailable")) {
-        setPasswordError(message);
-
-        return;
-      }
-
-      // Generic backend fallback
-      setPasswordError(message);
     } finally {
       setIsLoading(false);
     }
@@ -160,8 +171,10 @@ export default function Login() {
       navigate("/guest", {
         replace: true,
       });
-    } catch {
-      setPasswordError("Failed to create guest session");
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
+
+      setFieldError("password", apiError.detail);
     } finally {
       setIsLoading(false);
     }
@@ -172,7 +185,7 @@ export default function Login() {
       <form
         noValidate
         onSubmit={handleLogin}
-        className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-secondary p-5 shadow-xl sm:p-6 md:p-8"
+        className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-secondary p-5 shadow-xl sm:p-6 md:px-8 md:py-4"
       >
         <AuthHeader title="Welcome Back!" subtitle="Login to your account" />
 
@@ -181,7 +194,7 @@ export default function Login() {
           type="text"
           placeholder="Enter your username or email"
           icon={UserRound}
-          error={emailError}
+          error={errors.identifier}
           value={credentials.identifier}
           name="identifier"
           onChange={handleChange}
@@ -192,7 +205,7 @@ export default function Login() {
           type="password"
           placeholder="Enter your password"
           icon={Lock}
-          error={passwordError}
+          error={errors.password}
           value={credentials.password}
           name="password"
           onChange={handleChange}

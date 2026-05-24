@@ -4,9 +4,11 @@ import { refreshSession } from "../../services/auth_service";
 import { useAuth } from "../../context/AuthContext";
 import { getUserRedirectPath } from "../../utils/auth_redirects";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import LoadingScreen from "../../components/LoadingScreen";
 
 export default function OAuthSuccess() {
-  usePageTitle("Onboarding")
+  usePageTitle("Onboarding");
+
   const navigate = useNavigate();
 
   const { loginUser } = useAuth();
@@ -31,15 +33,5 @@ export default function OAuthSuccess() {
     restoreSession();
   }, [loginUser, navigate]);
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-bg-primary">
-      <div className="text-center">
-        <div className="mb-4 h-10 w-10 animate-spin rounded-full border-2 border-border-primary border-t-accent-primary mx-auto" />
-
-        <p className="text-sm text-text-secondary">
-          Completing Google authentication...
-        </p>
-      </div>
-    </div>
-  );
+  return <LoadingScreen text="Hang tight while we set things up" />;
 }

@@ -767,7 +767,7 @@ Commit - f413932
 - Cleanup jobs are isolated into dedicated maintenance services
 - Maintenance system is now ready for future Celery/Redis migration
 
-## 24 May 2026 — Auth Security & Architecture Stabilization
+## 23 May 2026 — Auth Security & Architecture Stabilization
 
 Commit - a66a6ff
 
@@ -796,7 +796,7 @@ Commit - a66a6ff
 
 ## 24 May 2026 — Backend Auth Test Coverage Expansion
 
-Commit - <hash>
+Commit - bda64cc
 
 ### Completed 
 
@@ -822,3 +822,41 @@ Commit - <hash>
 - Test structure now cleanly separates routes, services, dependencies, maintenance, and utilities
 - E2E auth lifecycle flows planned separately
 - Current test architecture is scalable for future API/domain expansion
+
+## 24 May 2026 — Frontend Auth Refactor & Flow Consistency
+
+Commit - <hash>
+
+### Completed
+
+- Refactored frontend auth pages for consistent architecture
+- Unified auth error handling using centralized API error utilities
+- Replaced fragile backend message parsing with auth error codes
+- Standardized field error management using reusable helpers
+- Refactored signup flow validation handling
+- Refactored login flow validation and backend error mapping
+- Refactored forgot password flow validation and error handling
+- Refactored OAuth onboarding flow handling
+- Added signup session expiration handling
+- Added user-facing expired session recovery feedback
+- Added consistent loading state behavior across auth flows
+- Added reusable animated loading screen component
+- Added optional loading screen text support
+- Added frontend username validation alignment with backend rules
+- Added username format validation for underscores, periods, and numeric-only usernames
+- Added backend/frontend username availability consistency handling
+- Added proper invalid OAuth session handling
+- Added centralized auth token restore handling
+- Replaced scattered local error states with structured error objects
+- Removed legacy string-matching auth error logic
+- Improved auth route initialization behavior
+- Improved auth UX consistency during refresh/session restore
+- Improved auth component structure and readability
+
+### Notes
+
+- Frontend auth architecture is now fully aligned with backend auth error contracts
+- Auth flows now use predictable code-based error handling instead of brittle message parsing
+- Signup, login, password reset, and OAuth onboarding now follow a unified structure
+- Frontend auth behavior is now significantly easier to maintain and extend
+- Remaining auth work is primarily focused on testing, security hardening, and edge-case validation

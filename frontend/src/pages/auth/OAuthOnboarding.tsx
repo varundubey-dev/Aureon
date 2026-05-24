@@ -9,36 +9,53 @@ import RoleSelection from "../../components/auth/RoleSelection";
 import { completeGoogleSignup } from "../../services/auth_service";
 import { useAuth } from "../../context/AuthContext";
 import { getUserRedirectPath } from "../../utils/auth_redirects";
+import { getApiError } from "../../utils/api_errors";
+import { AUTH_ERRORS } from "../../constants/auth_errors";
+import { toast } from "sonner";
 
 export default function OAuthOnboarding() {
-  usePageTitle("Onboarding")
+  usePageTitle("Onboarding");
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { loginUser } = useAuth();
-  const [role, setRole] = useState("");
-  const [roleError, setRoleError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const oauthSignupToken = searchParams.get("token");
+  const [isLoading, setIsLoading] = useState(false);
+  const [role, setRole] = useState("");
+  const [errors, setErrors] = useState({
+    role: "",
+  });
 
+  function setFieldError(field: keyof typeof errors, message: string) {
+    setErrors((prev) => ({
+      ...prev,
+      [field]: message,
+    }));
+  }
+
+  // Invalid OAuth session
   useEffect(() => {
     if (!oauthSignupToken) {
       navigate("/auth/login", {
         replace: true,
       });
+
+      toast.error("Invalid OAuth session. Please try again.");
     }
   }, [oauthSignupToken, navigate]);
 
+  // Complete OAuth signup
   async function handleContinue() {
-    setRoleError("");
+    setFieldError("role", "");
 
     if (!role) {
-      setRoleError("Please select a role");
+      setFieldError("role", "Please select a role");
 
       return;
     }
 
     if (!oauthSignupToken) {
-      setRoleError("Invalid OAuth session");
+      setFieldError("role", "Invalid OAuth session");
 
       return;
     }
@@ -53,10 +70,29 @@ export default function OAuthOnboarding() {
       navigate(getUserRedirectPath(response.user), {
         replace: true,
       });
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || "OAuth signup failed";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      setRoleError(message);
+      switch (apiError.code) {
+        case AUTH_ERRORS.INVALID_SIGNUP_TOKEN:
+          toast.error(
+            "OAuth session expired. Please continue with Google again.",
+          );
+
+          navigate("/auth/login", {
+            replace: true,
+          });
+
+          return;
+
+        case AUTH_ERRORS.INVALID_PUBLIC_ROLE:
+          setFieldError("role", apiError.detail);
+
+          return;
+
+        default:
+          setFieldError("role", apiError.detail);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +109,7 @@ export default function OAuthOnboarding() {
         <RoleSelection
           selectedRole={role}
           onSelect={setRole}
-          error={roleError}
+          error={errors.role}
         />
 
         <button

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, UserRound } from "lucide-react";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { toast } from "sonner";
 
 import AuthHeader from "../../components/auth/AuthHeader";
 import AuthInput from "../../components/auth/AuthInput";
@@ -21,7 +22,11 @@ import {
   validateSignupSession,
   verifySignupOtp,
 } from "../../services/auth_service";
+
 import { getUserRedirectPath } from "../../utils/auth_redirects";
+import { getApiError } from "../../utils/api_errors";
+import { AUTH_ERRORS } from "../../constants/auth_errors";
+
 import {
   validateConfirmPassword,
   validateEmail,
@@ -57,19 +62,28 @@ export default function Signup() {
     role: "",
   });
 
-  const [nameError, setNameError] = useState("");
-  const [emailError, setEmailError] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [usernameError, setUsernameError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [roleError, setRoleError] = useState("");
+  const [errors, setErrors] = useState({
+    name: "",
+    email: "",
+    otp: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    role: "",
+  });
 
   const isGuestUpgrade = !!user?.is_guest;
   const skipRoleSelection = isOAuthFlow || isGuestUpgrade;
   const totalSteps = skipRoleSelection ? 3 : 4;
   const currentVisibleStep =
     skipRoleSelection && signupStep === 4 ? 3 : signupStep;
+
+  function setFieldError(field: keyof typeof errors, message: string) {
+    setErrors((prev) => ({
+      ...prev,
+      [field]: message,
+    }));
+  }
 
   // Restore Resume Session
   useEffect(() => {
@@ -95,6 +109,7 @@ export default function Signup() {
         setSignupStep(3);
       } catch {
         sessionStorage.removeItem("signup_token");
+        toast.error("Signup session expired. Please start again.");
       }
     }
 
@@ -118,12 +133,12 @@ export default function Signup() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!credentials.name) {
-        setNameError("");
+        setFieldError("name", "");
 
         return;
       }
 
-      setNameError(validateName(credentials.name));
+      setFieldError("name", validateName(credentials.name));
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -133,12 +148,12 @@ export default function Signup() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!credentials.email) {
-        setEmailError("");
+        setFieldError("email", "");
 
         return;
       }
 
-      setEmailError(validateEmail(credentials.email));
+      setFieldError("email", validateEmail(credentials.email));
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -152,12 +167,12 @@ export default function Signup() {
 
     const timeout = setTimeout(() => {
       if (!credentials.otp) {
-        setOtpError("");
+        setFieldError("otp", "");
 
         return;
       }
 
-      setOtpError(validateOtp(credentials.otp));
+      setFieldError("otp", validateOtp(credentials.otp));
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -171,20 +186,21 @@ export default function Signup() {
 
     const timeout = setTimeout(() => {
       if (credentials.password) {
-        setPasswordError(validatePassword(credentials.password));
+        setFieldError("password", validatePassword(credentials.password));
       } else {
-        setPasswordError("");
+        setFieldError("password", "");
       }
 
       if (credentials.confirmPassword) {
-        setConfirmPasswordError(
+        setFieldError(
+          "confirmPassword",
           validateConfirmPassword(
             credentials.password,
             credentials.confirmPassword,
           ),
         );
       } else {
-        setConfirmPasswordError("");
+        setFieldError("confirmPassword", "");
       }
     }, 500);
 
@@ -204,7 +220,7 @@ export default function Signup() {
       setIsUsernameAvailable(null);
 
       if (!username) {
-        setUsernameError("");
+        setFieldError("username", "");
 
         return;
       }
@@ -213,7 +229,7 @@ export default function Signup() {
       const validationError = validateUsername(username);
 
       if (validationError) {
-        setUsernameError(validationError);
+        setFieldError("username", validationError);
         setIsUsernameAvailable(false);
 
         return;
@@ -224,17 +240,26 @@ export default function Signup() {
 
         const response = await checkUsernameAvailability(username);
 
-        if (!response.available) {
-          setUsernameError("Username already taken");
+        if (!response.valid) {
+          setFieldError("username", "Invalid username format");
+
           setIsUsernameAvailable(false);
 
           return;
         }
 
-        setUsernameError("");
+        if (!response.available) {
+          setFieldError("username", "Username already taken");
+
+          setIsUsernameAvailable(false);
+
+          return;
+        }
+
+        setFieldError("username", "");
         setIsUsernameAvailable(true);
       } catch {
-        setUsernameError("Failed to check username");
+        setFieldError("username", "Failed to check username");
 
         setIsUsernameAvailable(false);
       } finally {
@@ -260,8 +285,8 @@ export default function Signup() {
     const nameValidation = validateName(credentials.name);
     const emailValidation = validateEmail(credentials.email);
 
-    setNameError(nameValidation);
-    setEmailError(emailValidation);
+    setFieldError("name", nameValidation);
+    setFieldError("email", emailValidation);
 
     if (nameValidation || emailValidation) {
       return;
@@ -276,17 +301,26 @@ export default function Signup() {
       setCooldown(30);
 
       setSignupStep(2);
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || "Signup failed";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      if (message.includes("OTP resend cooldown active")) {
-        setCooldown(25);
-        setSignupStep(2);
+      switch (apiError.code) {
+        case AUTH_ERRORS.INVALID_NAME_FORMAT:
+          setFieldError("name", apiError.detail);
+          return;
 
-        return;
+        case AUTH_ERRORS.ACCOUNT_ALREADY_EXISTS:
+          setFieldError("email", apiError.detail);
+          return;
+
+        case AUTH_ERRORS.OTP_RESEND_COOLDOWN_ACTIVE:
+          setCooldown(25);
+          setSignupStep(2);
+          return;
+
+        default:
+          setFieldError("email", apiError.detail);
       }
-
-      setEmailError(message);
     } finally {
       setIsLoading(false);
     }
@@ -296,7 +330,7 @@ export default function Signup() {
   async function handleVerifyOTP() {
     const otpValidation = validateOtp(credentials.otp);
 
-    setOtpError(otpValidation);
+    setFieldError("otp", otpValidation);
 
     if (otpValidation) {
       return;
@@ -315,11 +349,10 @@ export default function Signup() {
       setUsernameSuggestions(response.username_suggestions);
       setIsOAuthFlow(response.type === "complete_local_setup");
       setSignupStep(3);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail || "OTP verification failed";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      setOtpError(message);
+      setFieldError("otp", apiError.detail);
     } finally {
       setIsLoading(false);
     }
@@ -329,21 +362,23 @@ export default function Signup() {
   async function handleResendOtp() {
     setOtpResent(true);
     setCooldown(30);
-    setOtpError("");
+    setFieldError("otp", "");
 
     try {
       await resendSignupOtp(credentials.email);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setCooldown(0);
       setOtpResent(false);
 
-      const message = error?.response?.data?.detail || "Failed to resend OTP";
+      const apiError = getApiError(error);
 
-      setOtpError(message);
+      setFieldError("otp", apiError.detail);
     }
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       setOtpResent(false);
     }, 3000);
+
+    return () => clearTimeout(timeout);
   }
 
   // Step 3
@@ -356,15 +391,15 @@ export default function Signup() {
       credentials.confirmPassword,
     );
 
-    setUsernameError(usernameValidation);
-    setPasswordError(passwordValidation);
-    setConfirmPasswordError(confirmValidation);
+    setFieldError("username", usernameValidation);
+    setFieldError("password", passwordValidation);
+    setFieldError("confirmPassword", confirmValidation);
 
     if (usernameValidation || passwordValidation || confirmValidation) {
       return;
     }
 
-    if (isCheckingUsername || usernameError) {
+    if (isCheckingUsername || isUsernameAvailable !== true) {
       return;
     }
 
@@ -394,46 +429,52 @@ export default function Signup() {
       navigate(getUserRedirectPath(response.user), {
         replace: true,
       });
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || "Signup failed";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      if (message.includes("Username")) {
-        setUsernameError(message);
-        setSignupStep(3);
+      switch (apiError.code) {
+        case AUTH_ERRORS.USERNAME_ALREADY_TAKEN:
+        case AUTH_ERRORS.INVALID_USERNAME_FORMAT:
+          setFieldError("username", apiError.detail);
 
-        return;
+          setSignupStep(3);
+
+          return;
+
+        case AUTH_ERRORS.WEAK_PASSWORD:
+        case AUTH_ERRORS.PASSWORDS_DO_NOT_MATCH:
+          setFieldError("confirmPassword", apiError.detail);
+
+          setSignupStep(3);
+
+          return;
+
+        case AUTH_ERRORS.INVALID_SIGNUP_TOKEN:
+          sessionStorage.removeItem("signup_token");
+
+          navigate("/auth/signup", {
+            replace: true,
+          });
+
+          toast.error("Signup session expired. Please start again.");
+
+          return;
+
+        default:
+          setFieldError("role", apiError.detail);
       }
-
-      if (message.includes("Password")) {
-        setPasswordError(message);
-        setSignupStep(3);
-
-        return;
-      }
-
-      if (message.includes("Invalid or expired signup")) {
-        sessionStorage.removeItem("signup_token");
-
-        navigate("/auth/signup", {
-          replace: true,
-        });
-
-        return;
-      }
-
-      setRoleError(message);
     } finally {
       setIsLoading(false);
     }
   }
 
   // Step 4 Submit
-  async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSignup(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    setRoleError("");
+    setFieldError("role", "");
 
     if (!credentials.role) {
-      setRoleError("Please select a role");
+      setFieldError("role", "Please select a role");
 
       return;
     }
@@ -461,8 +502,10 @@ export default function Signup() {
       navigate("/guest", {
         replace: true,
       });
-    } catch {
-      setPasswordError("Failed to create guest session");
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
+
+      setFieldError("password", apiError.detail);
     } finally {
       setIsLoading(false);
     }
@@ -533,7 +576,7 @@ export default function Signup() {
               type="text"
               placeholder="Enter your name"
               icon={UserRound}
-              error={nameError}
+              error={errors.name}
               value={credentials.name}
               name="name"
               onChange={handleChange}
@@ -544,7 +587,7 @@ export default function Signup() {
               type="email"
               placeholder="Enter your email"
               icon={Mail}
-              error={emailError}
+              error={errors.email}
               value={credentials.email}
               name="email"
               onChange={handleChange}
@@ -594,7 +637,7 @@ export default function Signup() {
         {signupStep === 2 && (
           <OtpForm
             otp={credentials.otp}
-            otpError={otpError}
+            otpError={errors.otp}
             onChange={handleChange}
             onSubmit={handleVerifyOTP}
             resendCooldown={cooldown}
@@ -611,7 +654,7 @@ export default function Signup() {
               type="text"
               placeholder="Choose a username"
               icon={UserRound}
-              error={usernameError}
+              error={errors.username}
               success={isUsernameAvailable === true}
               value={credentials.username}
               name="username"
@@ -656,8 +699,8 @@ export default function Signup() {
             <PasswordForm
               password={credentials.password}
               confirmPassword={credentials.confirmPassword}
-              passwordError={passwordError}
-              confirmPasswordError={confirmPasswordError}
+              passwordError={errors.password}
+              confirmPasswordError={errors.confirmPassword}
               onChange={handleChange}
             />
 
@@ -687,7 +730,7 @@ export default function Signup() {
                   role,
                 }))
               }
-              error={roleError}
+              error={errors.role}
             />
 
             <button

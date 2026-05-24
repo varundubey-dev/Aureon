@@ -7,6 +7,7 @@ import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import OAuthSuccess from "./pages/auth/OAuthSuccess";
+import OAuthError from "./pages/auth/OAuthError.tsx"
 import OAuthOnboarding from "./pages/auth/OAuthOnboarding";
 
 import Home from "./pages/listener/Home";
@@ -49,6 +50,15 @@ export default function App() {
         element={
           <AuthRoute>
             <OAuthSuccess />
+          </AuthRoute>
+        }
+      />
+
+      <Route 
+        path="/oauth/error"
+        element={
+          <AuthRoute>
+              <OAuthError />
           </AuthRoute>
         }
       />

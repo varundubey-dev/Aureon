@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import LoadingScreen from "../components/LoadingScreen";
 
 import { getUserRedirectPath } from "../utils/auth_redirects";
 
@@ -26,9 +27,9 @@ export default function RoleProtectedRoute({
   // Wait for auth restore
   // ==========================================
 
-  if (isInitializing) {
-    return null;
-  }
+    if (isInitializing) {
+      return <LoadingScreen />;
+    }
 
   // ==========================================
   // Not logged in

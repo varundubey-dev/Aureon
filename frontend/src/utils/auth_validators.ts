@@ -1,25 +1,11 @@
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const USERNAME_REGEX = /^(?!.*__)[a-zA-Z0-9_]{3,20}$/;
-
-const NAME_REGEX = /^[a-zA-Z]+(?: [a-zA-Z]+)*$/;
-
-const PASSWORD_REGEX =
-  /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/;
+const USERNAME_REGEX =
+  /^(?!.*__)(?!.*\.\.)(?!\d+$)[a-zA-Z0-9._]+$/;
 
 export function validateName(name: string): string {
   const trimmed = name.trim();
 
   if (!trimmed) {
     return "Name is required";
-  }
-
-  if (trimmed.length < 2) {
-    return "Name must be at least 2 characters";
-  }
-
-  if (!NAME_REGEX.test(trimmed)) {
-    return "Name can only contain letters and spaces";
   }
 
   return "";
@@ -32,34 +18,41 @@ export function validateEmail(email: string): string {
     return "Email is required";
   }
 
-  if (!EMAIL_REGEX.test(trimmed)) {
+  if (!trimmed.includes("@")) {
     return "Enter a valid email";
   }
 
   return "";
 }
 
-export function validateUsername(username: string): string {
+export function validateUsername(
+  username: string,
+): string {
   const trimmed = username.trim();
 
   if (!trimmed) {
     return "Username is required";
   }
 
-  if (trimmed.length < 3) {
-    return "Username must be at least 3 characters";
-  }
-
-  if (trimmed.length > 20) {
-    return "Username cannot exceed 20 characters";
+  if (trimmed.includes(" ")) {
+    return "Username cannot contain spaces";
   }
 
   if (!USERNAME_REGEX.test(trimmed)) {
-    return "Only letters, numbers, and underscores allowed";
+    return (
+      "Only letters, numbers, dots, and underscores allowed"
+    );
   }
 
-  if (trimmed.startsWith("_") || trimmed.endsWith("_")) {
-    return "Username cannot start or end with underscore";
+  if (
+    trimmed.startsWith("_") ||
+    trimmed.endsWith("_") ||
+    trimmed.startsWith(".") ||
+    trimmed.endsWith(".")
+  ) {
+    return (
+      "Username cannot start or end with dot or underscore"
+    );
   }
 
   return "";
@@ -70,12 +63,24 @@ export function validatePassword(password: string): string {
     return "Password is required";
   }
 
-  if (password.length < 6) {
-    return "Password must be at least 6 characters";
+  if (password.length < 8) {
+    return "Password must be at least 8 characters";
   }
 
-  if (!PASSWORD_REGEX.test(password)) {
-    return "Password must contain 1 uppercase letter, 1 number, and 1 symbol";
+  if (!/[A-Z]/.test(password)) {
+    return "Password must contain an uppercase letter";
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return "Password must contain a lowercase letter";
+  }
+
+  if (!/\d/.test(password)) {
+    return "Password must contain a number";
+  }
+
+  if (!/[!@#$%^&*]/.test(password)) {
+    return "Password must contain a special character";
   }
 
   return "";

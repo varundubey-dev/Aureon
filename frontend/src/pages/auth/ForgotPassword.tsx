@@ -25,20 +25,19 @@ import {
   validateConfirmPassword,
 } from "../../utils/auth_validators";
 
+import { getApiError } from "../../utils/api_errors";
+
+import { AUTH_ERRORS } from "../../constants/auth_errors";
+
 export default function ForgotPassword() {
-  usePageTitle("Reset Password")
+  usePageTitle("Reset Password");
+
   const navigate = useNavigate();
-
   const [step, setStep] = useState(1);
-
   const [cooldown, setCooldown] = useState(0);
-
   const [resetToken, setResetToken] = useState("");
-
   const [otpResent, setOtpResent] = useState(false);
-
   const [isLoading, setIsLoading] = useState(false);
-
   const [credentials, setCredentials] = useState({
     email: "",
     otp: "",
@@ -46,21 +45,23 @@ export default function ForgotPassword() {
     confirmPassword: "",
   });
 
-  const [emailError, setEmailError] = useState("");
+  const [errors, setErrors] = useState({
+    email: "",
+    otp: "",
+    password: "",
+    confirmPassword: "",
+  });
 
-  const [otpError, setOtpError] = useState("");
-
-  const [passwordError, setPasswordError] = useState("");
-
-  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  function setFieldError(field: keyof typeof errors, message: string) {
+    setErrors((prev) => ({
+      ...prev,
+      [field]: message,
+    }));
+  }
 
   // Cooldown Timer
   useEffect(() => {
-    if (step !== 2) {
-      return;
-    }
-
-    if (cooldown <= 0) {
+    if (step !== 2 || cooldown <= 0) {
       return;
     }
 
@@ -75,12 +76,12 @@ export default function ForgotPassword() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!credentials.email) {
-        setEmailError("");
+        setFieldError("email", "");
 
         return;
       }
 
-      setEmailError(validateEmail(credentials.email));
+      setFieldError("email", validateEmail(credentials.email));
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -94,12 +95,12 @@ export default function ForgotPassword() {
 
     const timeout = setTimeout(() => {
       if (!credentials.otp) {
-        setOtpError("");
+        setFieldError("otp", "");
 
         return;
       }
 
-      setOtpError(validateOtp(credentials.otp));
+      setFieldError("otp", validateOtp(credentials.otp));
     }, 500);
 
     return () => clearTimeout(timeout);
@@ -113,20 +114,21 @@ export default function ForgotPassword() {
 
     const timeout = setTimeout(() => {
       if (credentials.password) {
-        setPasswordError(validatePassword(credentials.password));
+        setFieldError("password", validatePassword(credentials.password));
       } else {
-        setPasswordError("");
+        setFieldError("password", "");
       }
 
       if (credentials.confirmPassword) {
-        setConfirmPasswordError(
+        setFieldError(
+          "confirmPassword",
           validateConfirmPassword(
             credentials.password,
             credentials.confirmPassword,
           ),
         );
       } else {
-        setConfirmPasswordError("");
+        setFieldError("confirmPassword", "");
       }
     }, 500);
 
@@ -147,7 +149,7 @@ export default function ForgotPassword() {
   async function handleContinue() {
     const emailValidation = validateEmail(credentials.email);
 
-    setEmailError(emailValidation);
+    setFieldError("email", emailValidation);
 
     if (emailValidation) {
       return;
@@ -161,11 +163,18 @@ export default function ForgotPassword() {
       setCooldown(30);
 
       setStep(2);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail || "Failed to request password reset";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      setEmailError(message);
+      if (apiError.code === AUTH_ERRORS.OTP_RESEND_COOLDOWN_ACTIVE) {
+        setCooldown(25);
+
+        setStep(2);
+
+        return;
+      }
+
+      setFieldError("email", apiError.detail);
     } finally {
       setIsLoading(false);
     }
@@ -177,18 +186,18 @@ export default function ForgotPassword() {
 
     setCooldown(30);
 
-    setOtpError("");
+    setFieldError("otp", "");
 
     try {
       await resendPasswordResetOtp(credentials.email);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setCooldown(0);
 
       setOtpResent(false);
 
-      const message = error?.response?.data?.detail || "Failed to resend OTP";
+      const apiError = getApiError(error);
 
-      setOtpError(message);
+      setFieldError("otp", apiError.detail);
     }
 
     setTimeout(() => {
@@ -200,7 +209,7 @@ export default function ForgotPassword() {
   async function handleVerifyOTP() {
     const otpValidation = validateOtp(credentials.otp);
 
-    setOtpError(otpValidation);
+    setFieldError("otp", otpValidation);
 
     if (otpValidation) {
       return;
@@ -217,18 +226,17 @@ export default function ForgotPassword() {
       setResetToken(response.reset_token);
 
       setStep(3);
-    } catch (error: any) {
-      const message =
-        error?.response?.data?.detail || "OTP verification failed";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      setOtpError(message);
+      setFieldError("otp", apiError.detail);
     } finally {
       setIsLoading(false);
     }
   }
 
   // Step 3 — Reset Password
-  async function handleResetPassword(e: React.FormEvent<HTMLFormElement>) {
+  async function handleResetPassword(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const passwordValidation = validatePassword(credentials.password);
@@ -238,9 +246,8 @@ export default function ForgotPassword() {
       credentials.confirmPassword,
     );
 
-    setPasswordError(passwordValidation);
-
-    setConfirmPasswordError(confirmPasswordValidation);
+    setFieldError("password", passwordValidation);
+    setFieldError("confirmPassword", confirmPasswordValidation);
 
     if (passwordValidation || confirmPasswordValidation) {
       return;
@@ -258,16 +265,23 @@ export default function ForgotPassword() {
       navigate("/auth/login", {
         replace: true,
       });
-    } catch (error: any) {
-      const message = error?.response?.data?.detail || "Password reset failed";
+    } catch (error: unknown) {
+      const apiError = getApiError(error);
 
-      if (message.includes("Password")) {
-        setPasswordError(message);
+      switch (apiError.code) {
+        case AUTH_ERRORS.WEAK_PASSWORD:
+          setFieldError("password", apiError.detail);
 
-        return;
+          return;
+
+        case AUTH_ERRORS.PASSWORDS_DO_NOT_MATCH:
+          setFieldError("confirmPassword", apiError.detail);
+
+          return;
+
+        default:
+          setFieldError("password", apiError.detail);
       }
-
-      setPasswordError(message);
     } finally {
       setIsLoading(false);
     }
@@ -293,7 +307,7 @@ export default function ForgotPassword() {
               type="email"
               placeholder="Enter your email"
               icon={Mail}
-              error={emailError}
+              error={errors.email}
               value={credentials.email}
               name="email"
               onChange={handleChange}
@@ -327,7 +341,7 @@ export default function ForgotPassword() {
         {step === 2 && (
           <OtpForm
             otp={credentials.otp}
-            otpError={otpError}
+            otpError={errors.otp}
             onChange={handleChange}
             onSubmit={handleVerifyOTP}
             resendCooldown={cooldown}
@@ -342,8 +356,8 @@ export default function ForgotPassword() {
             <PasswordForm
               password={credentials.password}
               confirmPassword={credentials.confirmPassword}
-              passwordError={passwordError}
-              confirmPasswordError={confirmPasswordError}
+              passwordError={errors.password}
+              confirmPasswordError={errors.confirmPassword}
               onChange={handleChange}
             />
 

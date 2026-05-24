@@ -54,6 +54,7 @@
 # =========================================================
 
 from sqlmodel import select
+import pytest
 
 from app.core.enums import (
     AuthProviderType,
@@ -307,10 +308,24 @@ def test_complete_signup_unverified_signup(
 # Username Validation
 # =========================================================
 
+@pytest.mark.parametrize(
+    "invalid_username",
+    [
+        "A",
+        "12345",
+        "Test@123",
+        "@@@",
+        "!!Test",
+        "",
+        "   ",
+        "Te@st",
+    ],
+)
 
 def test_complete_signup_invalid_username(
     client,
     session,
+    invalid_username,
 ):
 
     signup_token = create_verified_signup_state(
@@ -321,7 +336,7 @@ def test_complete_signup_invalid_username(
     response = complete_signup(
         client,
         signup_token,
-        username="@invalid",
+        invalid_username,
     )
 
     assert response.status_code == 400
@@ -397,6 +412,20 @@ def test_complete_signup_password_mismatch(
 
     assert data["code"] == "PASSWORDS_DO_NOT_MATCH"
 
+@pytest.mark.parametrize(
+    "weak_password",
+    [
+        "A",
+        "12345",
+        "admin1235678",
+        "@@@",
+        "!!Test",
+        "",
+        "   ",
+        "Te@st",
+        "testpassword@123",
+    ],
+)
 
 def test_complete_signup_weak_password(
     client,

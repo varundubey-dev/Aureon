@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: var(--color-bg-primary);
+}
+
 @theme {
 
   /* Backgrounds */
@@ -63,6 +71,35 @@
   --drop-shadow-auth-logo:
     0 0 35px rgba(255, 215, 100, 0.08);
 
+}
+
+
+.loader-dot {
+  width: 18px;
+  height: 18px;
+  margin: 8px;
+  border-radius: 9999px;
+  background-color: var(--color-accent-primary);
+  display: inline-block;
+}
+
+.animate-loader-1 {
+  animation: loader-scale 0.8s ease-in-out alternate infinite;
+}
+
+.animate-loader-2 {
+  animation: loader-scale 0.8s ease-in-out 0.3s alternate infinite;
+}
+
+.animate-loader-3 {
+  animation: loader-scale 0.8s ease-in-out 0.6s alternate infinite;
+}
+
+@keyframes loader-scale {
+  to {
+    transform: scale(1.8);
+    opacity: 0.5;
+  }
 }
 
 input:-webkit-autofill,

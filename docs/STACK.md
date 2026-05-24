@@ -32,6 +32,7 @@
 - react-icons
 - lucide-react
 - axios
+- sonner
 
 ### Dev Dependencies
 
